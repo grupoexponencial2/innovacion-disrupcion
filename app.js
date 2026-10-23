@@ -82,7 +82,7 @@ function renderInicio() {
     <section class="card"><div class="ch"><h3>Calendario de la semana</h3><span class="sub">${fs(ws)} – ${fs(we)}</span><div class="wk r"><button class="ib" id="wp" aria-label="Semana anterior">‹</button><button class="pill ${S.wk ? '' : 'on'}" id="wt">Esta semana</button><button class="ib" id="wn" aria-label="Semana siguiente">›</button></div></div>
       <div class="week">${Array.from({ length: 7 }, (_, i) => add(ws, i)).map(f => { const xs = mias.filter(a => a.f === f).sort((x, y) => x.h.localeCompare(y.h)), dd = new Date(f + 'T12:00:00');
         return `<div class="day ${f === HOY ? 'hoy' : ''}"><div class="dh"><span>${DIA[dd.getDay()].slice(0, 3)}</span><b>${dd.getDate()}</b>${f === HOY ? '<em>HOY</em>' : ''}</div>${xs.slice(0, 3).map(a => `<div class="ev ${a.st === 'Terminado' ? 'done' : ''} ${vencida(a) ? 'lt' : ''}" style="--c:${vencida(a) ? 'var(--bad)' : pj(a.p).c}"><b>${esc(a.t)}</b><small>${a.h}${a.ent ? ' · ' + esc(a.ent) : ''}</small></div>`).join('') || '<div class="dempty">Sin actividades</div>'}${xs.length > 3 ? `<small class="sub" style="text-align:center">+${xs.length - 3} más</small>` : ''}</div>`; }).join('')}</div></section>
-    <p class="note">Maqueta con datos de ejemplo. Usa "Ver como" para revisar el Inicio de cada persona. Los botones de proyecto y "Usuarios y permisos" solo aparecen para administradoras.</p>`;
+    `;
   document.querySelectorAll('[data-ajv]').forEach(b => b.onclick = () => IND.some(x => x.id === b.dataset.ajv) ? indDetalle(b.dataset.ajv) : actividad(b.dataset.ajv));
   document.querySelectorAll('.feat .pl').forEach(b => b.onclick = () => { S.view = 'proy'; render(); });
   if (document.getElementById('goinn')) document.getElementById('goinn').onclick = () => { S.view = 'inn'; render(); };
@@ -122,7 +122,7 @@ const visibles = () => PERS[S.yo].admin ? PROY : PERS[S.yo].ext ? proysArea(S.yo
 const notifica = (k, msg) => toast(`Notificación enviada a ${PERS[k].n}: ${msg}`);
 
 function openSheet(html, wide) { const sh = document.getElementById('sheet'); sh.innerHTML = html; sh.classList.toggle('wide', !!wide); sh.classList.add('on'); document.getElementById('scrim').classList.add('on'); sh.scrollTop = 0; sh.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheet); }
-function closeSheet() { document.getElementById('sheet').classList.remove('on'); document.getElementById('scrim').classList.remove('on'); }
+function closeSheet() { document.getElementById('sheet').classList.remove('on'); document.getElementById('scrim').classList.remove('on'); if (typeof trasCerrarFicha === 'function') trasCerrarFicha(); }
 document.getElementById('scrim').onclick = closeSheet;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 const X = '<button class="x" data-close aria-label="Cerrar">✕</button>';
@@ -139,12 +139,12 @@ function renderProy() {
     <div class="tools"><div class="seg" id="ptab">${['Activo', 'Terminado'].map(t => `<button data-t="${t}" class="${FP.tab === t ? 'on' : ''}">${t === 'Activo' ? 'Activos' : 'Terminados'} · ${base.filter(p => p.est === t).length}</button>`).join('')}</div>
       ${sel('ftipo', 'Tipo', FP.tipo, TIPOS.map(x => [x, x]))}${sel('finst', 'Institución', FP.inst, INSTS.map(x => [x, x]))}${sel('farea', 'Área', FP.area, AREAS.map(x => [x, x]))}${sel('fmes', 'Mes de solicitud', FP.mes, meses.map(m => [m, mesL(m + '-01')]))}</div>
     ${list.length ? `<div class="pgal">${list.map(p => { const v = avance(p), xs = A.filter(a => a.p === p.id), aj = xs.filter(a => a.st === 'Requiere ajustes').length;
-      return `<button class="pcard" data-pj="${p.id}"><div class="pcov" style="--c:${p.c}"><span class="chip">${esc(p.tipo)}</span>${aj ? `<span class="chip warn">${aj} con ajustes</span>` : ''}<span class="pavs">${p.eq.map(k => av(k, 26)).join('')}</span></div>
+      return `<button class="pcard" data-pj="${p.id}"><div class="pcov" style="--c:${p.c}${fondoFoto(p.foto)}"><span class="chip">${esc(p.tipo)}</span>${aj ? `<span class="chip warn">${aj} con ajustes</span>` : ''}<span class="pavs">${p.eq.map(k => av(k, 26)).join('')}</span></div>
         <div class="pbody"><div class="pt2">${esc(p.n)}</div><div class="pinst">${esc(p.inst)}</div>
           <div class="pgrid"><div><small>Área solicitante</small><b>${esc(p.area)}</b></div><div><small>Solicitud</small><b>${fs(p.fsol)}</b></div><div><small>Compromiso</small><b>${fs(p.comp)}</b></div></div>
           <div class="pfoot"><span>${xs.filter(a => a.st === 'Terminado').length} de ${xs.length} actividades</span><b>${v}%</b></div><div class="pbar"><i style="width:${Math.max(v, 2)}%;background:${p.c}"></i></div></div></button>`; }).join('')}</div>`
       : `<div class="empty">${base.length ? 'No hay proyectos con estos filtros.' : 'Aún no participas en proyectos.'}</div>`}
-    <p class="note">${PERS[S.yo].ext ? `Ves los proyectos donde participa el área ${esc(PERS[S.yo].area)}, con el mismo avance que ve el equipo. La revisión de entregables se hace desde "Por revisar" o desde la ficha del proyecto.` : ''}</p><p class="note" style="${PERS[S.yo].ext ? 'display:none' : ''}">Maqueta con datos de ejemplo. Los usuarios solo ven los proyectos en los que participan; crear, editar y terminar proyectos es exclusivo de administradoras.</p>`;
+    <p class="note">${PERS[S.yo].ext ? `Ves los proyectos donde participa el área ${esc(PERS[S.yo].area)}, con el mismo avance que ve el equipo. La revisión de entregables se hace desde "Por revisar" o desde la ficha del proyecto.` : ''}</p><p class="note" style="${PERS[S.yo].ext ? 'display:none' : ''}">Los usuarios solo ven los proyectos en los que participan; crear, editar y terminar proyectos es exclusivo de administradoras.</p>`;
   (document.getElementById('as') || {}).onchange = e => { S.yo = e.target.value; render(); };
   document.querySelectorAll('#ptab button').forEach(b => b.onclick = () => { FP.tab = b.dataset.t; render(); });
   [['ftipo', 'tipo'], ['finst', 'inst'], ['farea', 'area'], ['fmes', 'mes']].forEach(([id, k]) => document.getElementById(id).onchange = e => { FP[k] = e.target.value; render(); });
@@ -162,17 +162,19 @@ function proyectoForm(p) {
       <label class="f"><span>Fecha de solicitud</span><input class="in" type="date" id="fs" value="${e.fsol}"></label>
       <label class="f"><span>Fecha compromiso</span><input class="in" type="date" id="fc" value="${e.comp}"></label>
       <div class="f full"><span>Equipo involucrado</span><div class="opts" id="feq">${Object.entries(EQ()).map(([k, x]) => `<button type="button" class="opt ${e.eq.includes(k) ? 'on' : ''}" data-k="${k}">${x.n}</button>`).join('')}</div></div>
-      <div class="f full"><span>Foto del proyecto</span><div class="upl"><div class="upl-p"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></div><button type="button" class="btn">Subir foto</button><span class="sub">JPG o PNG. Se adapta sola al escritorio y al celular.</span></div></div>
+      ${portadaCampo('ffoto', 'Foto del proyecto', p && p.foto)}
       <div class="f full"><span>Color</span><div class="sws">${PAL.map(c => `<button type="button" class="sw ${e.c === c ? 'on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color"></button>`).join('')}</div></div></div>
     <div class="sh-f"><button class="btn" data-close>Cancelar</button><button class="btn dark" id="fok">${p ? 'Guardar cambios' : 'Crear proyecto'}</button></div>`);
   document.querySelectorAll('#feq .opt').forEach(b => b.onclick = () => b.classList.toggle('on'));
   document.querySelectorAll('.sw').forEach(b => b.onclick = () => { e.c = b.dataset.c; document.querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === b)); });
+  const fotoP = {}; enlazarPortada('ffoto', fotoP);
   document.getElementById('fok').onclick = () => {
     const n = document.getElementById('fn').value.trim(); if (!n) { toast('Escribe el nombre del proyecto.'); return; }
     const eq = [...document.querySelectorAll('#feq .opt.on')].map(b => b.dataset.k); if (!eq.length) { toast('Selecciona al menos a una persona.'); return; }
     const row = { n, tipo: document.getElementById('ft').value, inst: document.getElementById('fi').value, area: document.getElementById('fa').value, fsol: document.getElementById('fs').value, comp: document.getElementById('fc').value, eq, c: e.c };
     let it = p; if (p) Object.assign(p, row); else { it = { id: uid(), est: 'Activo', ...row }; PROY.push(it); }
-    guardar(() => DB.proyecto(it, !p), p ? 'Proyecto actualizado' : 'Proyecto creado'); closeSheet(); render(); proyecto(it.id);
+    if (fotoP.blob) toast('Guardando proyecto y foto…');
+    guardar(async () => { await DB.proyecto(it, !p); await guardarPortada('proyectos', it, fotoP); }, p ? 'Proyecto actualizado' : 'Proyecto creado').then(() => { render(); if (document.getElementById('sheet').classList.contains('on') && fotoP.blob) proyecto(it.id); }); closeSheet(); render(); proyecto(it.id);
   };
 }
 
@@ -196,7 +198,7 @@ function proyecto(id) {
       ${a.st === 'Requiere ajustes' && u ? `<div class="kaj"><b>Prioridad · ajuste ${nAj(a)}</b>${esc(u.com)}<small>${u.ini ? `Inicio ${fdt(u.ini)}` : 'Sin iniciar'}${u.fin ? ` · entrega ${fdt(u.fin)}` : ''}</small></div>` : ''}
       ${mia ? '<div class="krev">Te toca revisar</div>' : ''}</button>`; };
   openSheet(`<div class="sh-h"><span class="chip dark" style="--c:${p.c}">${esc(p.tipo)}</span><span class="chip">${esc(p.inst)}</span><span class="chip ${p.est === 'Activo' ? 'id' : 'ok'}">${p.est}</span>${p.est === 'Terminado' && yo.admin ? `<span class="vchip ${p.imp && p.imp.final ? 'ok' : ''}">${p.imp && p.imp.final ? 'Impacto validado' : 'Impacto por validar'}</span>` : ''}${X}</div>
-    <div class="ban" style="--c:${p.c}"></div>
+    <div class="ban" style="--c:${p.c}${fondoFoto(p.foto, true)}"></div>
     <h2 class="ptitle">${esc(p.n)}</h2>
     <div class="dl"><div><small>Área solicitante</small><b>${esc(p.area)}</b></div><div><small>Fecha de solicitud</small><b>${fs(p.fsol)}</b></div><div><small>Fecha compromiso</small><b>${fs(p.comp)}</b></div><div><small>Ajustes solicitados</small><b>${totAj}</b></div></div>
     <div class="adv"><b>${v}%</b><div><div class="pbar"><i style="width:${Math.max(v, 2)}%;background:${p.c}"></i></div><small>${xs.filter(a => a.st === 'Terminado').length} de ${xs.length} actividades terminadas</small></div></div>
@@ -317,7 +319,7 @@ function renderProg() {
     ${cal}
     <div class="tools"><div class="seg" id="gtab">${['En curso', 'Terminado'].map(t => `<button data-t="${t}" class="${FG.tab === t ? 'on' : ''}">${t === 'En curso' ? 'En curso' : 'Terminados'} · ${PROGS.filter(g => g.est === t).length}</button>`).join('')}</div>
       <select class="fsel" id="ginst"><option value="">Institución: todas</option>${INSTS.map(x => `<option ${FG.inst === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
-    ${list.length ? `<div class="pgal">${list.map(g => { const a = progAv(g); return `<button class="pcard" data-pg="${g.id}"><div class="pcov" style="--c:${g.c}"><span class="chip">${esc(g.cli)}</span><span class="chip">${g.mods.length} módulos</span>${g.porSes ? `<span class="chip">${g.nSes} sesión${g.nSes > 1 ? 'es' : ''} por módulo</span>` : ''}${g.grupos > 1 ? `<span class="chip">${g.grupos} grupos</span>` : ''}</div>
+    ${list.length ? `<div class="pgal">${list.map(g => { const a = progAv(g); return `<button class="pcard" data-pg="${g.id}"><div class="pcov" style="--c:${g.c}${fondoFoto(g.foto)}"><span class="chip">${esc(g.cli)}</span><span class="chip">${g.mods.length} módulos</span>${g.porSes ? `<span class="chip">${g.nSes} sesión${g.nSes > 1 ? 'es' : ''} por módulo</span>` : ''}${g.grupos > 1 ? `<span class="chip">${g.grupos} grupos</span>` : ''}</div>
       <div class="pbody"><div class="pt2">${esc(g.n)}</div><div class="pinst">${esc(g.inst)}</div><div class="sub" style="font-size:12px">${a.rango ? `${fs(a.rango[0])} – ${fs(a.rango[1])}` : 'Sin fechas'}</div>
         <div class="pfoot"><span>Avance</span><b>${a.pct}%</b></div><div class="pbar"><i style="width:${Math.max(a.pct, 2)}%;background:${g.c}"></i></div>
         <div class="pnext">${a.cur ? `<b>En curso:</b> ${esc(a.cur.n)} · termina ${fs(a.cur.fin)}` : a.sig ? `<b>Próximo:</b> ${esc(a.sig.n)} · inicia ${fs(a.sig.ini)}` : 'Todos los módulos concluidos'}</div></div></button>`; }).join('')}</div>`
@@ -335,7 +337,7 @@ function programa(id) {
   const ini = a.rango ? a.rango[0] : HOY, fin = a.rango ? a.rango[1] : HOY;
   const span = Math.max(1, (new Date(fin) - new Date(ini)) / 864e5 + 1), pos = f => ((new Date(f) - new Date(ini)) / 864e5) / span * 100;
   openSheet(`<div class="sh-h"><span class="chip dark" style="--c:${g.c}">${esc(g.cli)}</span><span class="chip">${esc(g.inst)}</span><span class="chip ${g.est === 'En curso' ? 'id' : 'ok'}">${g.est}</span>${X}</div>
-    <div class="ban" style="--c:${g.c}"></div><h2 class="ptitle">${esc(g.n)}</h2>
+    <div class="ban" style="--c:${g.c}${fondoFoto(g.foto, true)}"></div><h2 class="ptitle">${esc(g.n)}</h2>
     <div class="dl"><div><small>Cliente</small><b>${esc(g.cli)}</b></div><div><small>Horas</small><b>${g.horas}</b></div><div><small>Grupos</small><b>${g.grupos}</b></div><div><small>Sesiones</small><b>${g.porSes ? `${g.nSes} por módulo` : 'No se divide'}</b></div><div><small>Periodo</small><b>${fs(ini)} – ${fs(fin)}</b></div></div>
     <div class="adv"><b>${a.pct}%</b><div><div class="pbar"><i style="width:${Math.max(a.pct, 2)}%;background:${g.c}"></i></div><small>${a.hechos} de ${ms.length} módulos concluidos${a.cur ? ` · en curso: ${esc(a.cur.n)}` : ''}</small></div></div>
     <div class="sh3 row"><h3 class="sh3" style="margin:0">Cronograma</h3><span class="sub">${g.porSes ? 'Los puntos marcan las sesiones; la línea, hoy' : 'La línea marca hoy'}</span></div>
@@ -348,7 +350,7 @@ function programa(id) {
   document.getElementById('gst').onclick = () => { g.est = g.est === 'En curso' ? 'Terminado' : 'En curso'; guardar(() => DB.programa(g)); toast(g.est === 'Terminado' ? 'Programa terminado' : 'Programa reactivado'); render(); programa(g.id); };
 }
 function programaForm(g) {
-  const e = g ? JSON.parse(JSON.stringify(g)) : { n: '', cli: '', inst: INSTS[0], horas: '', grupos: 1, porSes: false, nSes: 2, c: PAL[(PROGS.length + 2) % PAL.length], mods: [] };
+  const e = g ? JSON.parse(JSON.stringify(g)) : { n: '', cli: '', inst: INSTS[0], horas: '', grupos: 1, porSes: false, nSes: 2, c: PAL[(PROGS.length + 2) % PAL.length], mods: [] }; e._fp = {};
   const ajusta = () => { const ng = Math.max(1, +e.grupos || 1), ns = Math.max(1, +e.nSes || 1);
     e.mods.forEach(m => { m.profs = Array.from({ length: ng }, (_, i) => (m.profs || [])[i] || ''); if (e.porSes) m.ses = Array.from({ length: ns }, (_, i) => (m.ses || [])[i] || ''); }); };
   const draw = () => {
@@ -361,7 +363,7 @@ function programaForm(g) {
         <label class="f"><span>Grupos</span><input class="in" type="number" min="1" max="20" id="gg" value="${e.grupos}"></label>
         <div class="f"><span>¿El programa se divide por sesiones?</span><div class="opts" id="gses"><button type="button" class="opt ${e.porSes ? 'on' : ''}" data-v="1">Sí</button><button type="button" class="opt ${e.porSes ? '' : 'on'}" data-v="0">No</button></div></div>
         ${e.porSes ? `<label class="f"><span>Número de sesiones por módulo</span><input class="in" type="number" min="1" max="20" id="gns" value="${e.nSes}"></label>` : '<div></div>'}
-        <div class="f full"><span>Foto del programa</span><div class="upl"><div class="upl-p"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></div><button type="button" class="btn">Subir foto</button></div></div>
+        ${portadaCampo('gfoto', 'Foto del programa', e._fp && e._fp.prev !== undefined ? e._fp.prev : (g && g.foto))}
         <div class="f full"><span>Color</span><div class="sws">${PAL.map(c => `<button type="button" class="sw ${e.c === c ? 'on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color"></button>`).join('')}</div></div></div>
       <h3 class="sh3">Módulos</h3>${e.mods.length ? e.mods.map((m, i) => `<div class="mcard"><div class="mc-h"><input class="in" data-m="${i}" data-k="n" value="${esc(m.n)}" placeholder="Nombre del módulo"><button class="x" data-md="${i}" aria-label="Quitar módulo">✕</button></div>
           ${e.porSes ? `<div class="mc-l">Fechas de las sesiones</div><div class="mc-g">${m.ses.map((d, j) => `<label class="f"><span>Sesión ${j + 1}</span><input class="in" type="date" data-ses="${i}:${j}" value="${d}"></label>`).join('')}</div>`
@@ -381,13 +383,14 @@ function programaForm(g) {
     v('madd').onclick = () => { sync(); const last = e.mods[e.mods.length - 1], d0 = last && last.fin ? add(last.fin, 1) : HOY;
       e.mods.push({ n: `Módulo ${e.mods.length + 1}`, ini: d0, fin: add(d0, 6), ses: e.porSes ? Array.from({ length: e.nSes }, (_, j) => add(d0, j * 7)) : [], profs: [] }); draw(); };
     document.querySelectorAll('[data-md]').forEach(b => b.onclick = () => { sync(); e.mods.splice(+b.dataset.md, 1); draw(); });
+    enlazarPortada('gfoto', e._fp);
     v('gok').onclick = () => { sync(); if (!e.n.trim()) { toast('Escribe el nombre del programa.'); return; }
       if (e.porSes && e.mods.some(m => m.ses.some(d => !d))) { toast('Captura la fecha de cada sesión.'); return; }
       if (!e.porSes && e.mods.some(m => !m.ini || !m.fin)) { toast('Cada módulo necesita fecha de inicio y fin.'); return; }
       e.mods.forEach(m => { if (e.porSes) { const s2 = [...m.ses].sort(); m.ses = s2; m.ini = s2[0]; m.fin = s2[s2.length - 1]; } else m.ses = []; });
       const row = { n: e.n.trim(), cli: e.cli.trim(), inst: e.inst, horas: +e.horas || 0, grupos: e.grupos, porSes: e.porSes, nSes: e.porSes ? e.nSes : 0, c: e.c, mods: e.mods };
       let it = g; if (g) Object.assign(g, row); else { it = { id: uid(), est: 'En curso', ...row }; PROGS.push(it); }
-      guardar(() => DB.programa(it, !g));
+      const fp = e._fp; guardar(async () => { await DB.programa(it, !g); await guardarPortada('programas', it, fp); }).then(() => render());
       toast(g ? 'Programa actualizado' : 'Programa creado. Te avisaremos de cada sesión, inicio y fin de módulo.'); render(); programa(g ? g.id : PROGS[PROGS.length - 1].id); };
   };
   draw();
@@ -578,7 +581,7 @@ const trim = f => `${f.slice(0, 4)}-T${Math.floor((+f.slice(5, 7) - 1) / 3) + 1}
 const trimLabel = t => `${['Primer', 'Segundo', 'Tercer', 'Cuarto'][+t.slice(-1) - 1]} trimestre ${t.slice(0, 4)}`;
 const trimRango = t => { const y = +t.slice(0, 4), q = +t.slice(-1); return [iso(new Date(y, (q - 1) * 3, 1, 12)), iso(new Date(y, q * 3, 0, 12))]; };
 const trimMove = (t, n) => { let y = +t.slice(0, 4), q = +t.slice(-1) + n; while (q > 4) { q -= 4; y++; } while (q < 1) { q += 4; y--; } return `${y}-T${q}`; };
-const KPIS = ['KPI por definir'];
+const KPIS = ['Cumplimiento en fecha', 'Salud del portafolio', 'Tasa de implementación', 'Impacto validado'];
 const ac = (a, r, dlim, res, w, fel, ok, obt) => ({ a, r, lim: add(HOY, dlim), res, w, fel: fel === null ? null : add(HOY, fel), ok, obt: obt || '' });
 const INI = [];
 const FN = { t: trim(HOY) };
@@ -597,7 +600,7 @@ function renderIni() {
   const seg = i => `<div class="segbar">${i.acc.map(x => `<i class="${x.ok === true ? 'y' : x.ok === false ? 'n' : !x.fel && x.lim < HOY ? 'l' : x.fel ? 'e' : ''}" style="flex:1" title="${esc(x.a)} · ${pctTxt(wAcc(i))}"></i>`).join('')}</div>`;
   const slot = (i, n) => { if (!i) return `<button class="islot empty2" ${yo.admin ? 'id="nnew2"' : ''}><span class="inum">${n}</span><b>Iniciativa por definir</b><small>${yo.admin ? 'Toca para crearla' : 'La definirán la directora y la supervisora'}</small></button>`;
     const pa = avIni(i), sig = i.acc.filter(x => x.ok === null).sort((a, b) => a.lim.localeCompare(b.lim))[0], eq = [...new Set(i.acc.map(x => x.r))], ok = i.acc.filter(x => x.ok === true).length, ritmo = actual ? pa - dias : 0;
-    return `<button class="icv" data-idet="${i.id}" style="--c:${i.c}"><div class="icv-top"><span class="inum">${n}</span><span class="kpi-chip">${esc(i.kpi)}</span>${actual ? `<span class="pace ${ritmo >= 0 ? 'ok' : ritmo > -15 ? 'mid' : 'bad'}">${ritmo >= 0 ? 'En ritmo' : ritmo > -15 ? 'Ligeramente atrasada' : 'Atrasada'}</span>` : ''}</div>
+    return `<button class="icv" data-idet="${i.id}" style="--c:${i.c}"><div class="icv-top"><span class="inum">${n}</span><span class="kpi-chip" title="${esc(kpiActual(i.kpi))}">${esc(i.kpi)}</span>${actual ? `<span class="pace ${ritmo >= 0 ? 'ok' : ritmo > -15 ? 'mid' : 'bad'}">${ritmo >= 0 ? 'En ritmo' : ritmo > -15 ? 'Ligeramente atrasada' : 'Atrasada'}</span>` : ''}</div>
       <div class="icv-body"><div class="icv-ring" style="--p:${pa}"><div><b>${pa}%</b><small>avance</small></div></div>
         <div class="icv-txt"><h3>${esc(i.n)}</h3><p>${esc(i.meta)}</p><div class="team">${eq.map(k => av(k, 26)).join('')}</div></div></div>
       ${seg(i)}<div class="icv-f"><span><b>${ok}</b> de ${i.acc.length} acciones cumplidas</span>${sig ? `<span>Siguiente: <b>${esc(sig.a)}</b> · ${fs(sig.lim)}</span>` : '<span>Sin acciones pendientes</span>'}</div>
@@ -628,7 +631,7 @@ function iniDetalle(id) {
   const stTxt = x => x.ok === true ? ['Se cumplió', 'y'] : x.ok === false ? ['No se cumplió', 'n'] : !x.fel && x.lim < HOY ? ['Vencida', 'l'] : x.fel ? ['Elaborada · por evaluar', 'e'] : ['En curso', ''];
   openSheet(`<div class="idet-cover" style="--c:${i.c}"><div class="sh-h" style="margin:0"><span class="chip">${trimLabel(i.t)}</span><span class="chip">${esc(i.kpi)}</span>${X}</div>
       <div class="idc-b"><div class="icv-ring big" style="--p:${pa}"><div><b>${pa}%</b><small>avance</small></div></div><div><h2>${esc(i.n)}</h2><p>${esc(i.obj)}</p></div></div></div>
-    <div class="dl" style="margin-top:12px"><div><small>Meta de la iniciativa</small><b>${esc(i.meta)}</b></div><div><small>KPI que impacta</small><b>${esc(i.kpi)}</b></div><div><small>Avance vs. tiempo</small><b>${pa}% de avance · ${dias}% del trimestre</b></div><div><small>Acciones</small><b>${i.acc.filter(x => x.ok === true).length} cumplidas de ${i.acc.length} · cada una vale ${pctTxt(wAcc(i))}</b></div></div>
+    <div class="dl" style="margin-top:12px"><div><small>Meta de la iniciativa</small><b>${esc(i.meta)}</b></div><div><small>KPI que impacta</small><b>${esc(i.kpi)}</b>${kpiActual(i.kpi) ? `<small style="display:block;margin-top:2px">${kpiActual(i.kpi)}</small>` : ''}</div><div><small>Avance vs. tiempo</small><b>${pa}% de avance · ${dias}% del trimestre</b></div><div><small>Acciones</small><b>${i.acc.filter(x => x.ok === true).length} cumplidas de ${i.acc.length} · cada una vale ${pctTxt(wAcc(i))}</b></div></div>
     
     <div class="sh3 row"><h3 class="sh3" style="margin:0">Ruta de acciones</h3><span class="sub">Cada acción en su fecha límite dentro del trimestre</span></div>
     <div class="iroute"><div class="ir-line"><i style="width:${dias}%"></i></div>${actual ? `<span class="ir-today" style="left:${dias}%">Hoy</span>` : ''}${i.acc.map((x, k) => `<button class="ir-pt ${stTxt(x)[1]}" style="left:${pos(x.lim)}%" data-iac="${i.id}:${k}" title="${esc(x.a)} · ${fs(x.lim)}">${x.ok === true ? '✓' : x.ok === false ? '✕' : k + 1}</button>`).join('')}
@@ -653,7 +656,7 @@ function iniForm(i) {
       <label class="f"><span>KPI que se quiere impactar</span><select class="in" id="in3">${KPIS.map(k => `<option ${e.kpi === k ? 'selected' : ''}>${k}</option>`).join('')}</select></label>
       <label class="f"><span>Meta de la iniciativa</span><input class="in" id="in4" value="${esc(e.meta)}" placeholder="Ej. Reducir 30% los ajustes por actividad"></label>
       <div class="f full"><span>Color</span><div class="sws">${PAL.map(c => `<button type="button" class="sw ${e.c === c ? 'on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color"></button>`).join('')}</div></div></div>
-    <p class="sub">El catálogo de KPIs se cargará cuando se definan; mientras tanto queda como "KPI por definir".</p>
+    <p class="sub">Elige el KPI del área al que contribuye la iniciativa. Su resultado del mes se muestra en la tarjeta de la iniciativa.</p>
     <div class="sh-f">${i ? '<button class="btn" id="idel" style="margin-right:auto;color:var(--bad)">Eliminar</button>' : ''}<button class="btn" data-close>Cancelar</button><button class="btn dark" id="iok">${i ? 'Guardar' : 'Crear iniciativa'}</button></div>`);
   const g = x => document.getElementById(x);
   document.querySelectorAll('.sw').forEach(b => b.onclick = () => { e.c = b.dataset.c; document.querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === b)); });
@@ -739,7 +742,7 @@ function renderEq() {
         <div class="ec-av"><div><span>Avance de la semana</span><b>${s.av}%</b></div><div class="pbar"><i style="width:${Math.max(s.av, 2)}%;background:${P.c}"></i></div><small>${s.hechas.length} de ${s.prog.length} actividades programadas · ${s.ajTot} ajuste(s) recibidos en total</small></div>
         <div class="ec-list">${prox.map(a => `<div class="ec-it"><i style="background:${pj(a.p).c}"></i><div><b>${esc(a.t)}</b><small>${esc(pj(a.p).n)} · ${a.st}</small></div><span class="kd ${vencida(a) ? 'late' : ''}">${a.f === HOY ? 'Hoy' : fs(a.f)} · ${a.h}</span></div>`).join('') || '<div class="sub">Sin actividades abiertas.</div>'}</div>
         <span class="icv-go">Ver desglose ›</span></button>`; }).join('')}</div>
-    <p class="note">El tiempo en plataforma cuenta todo el tiempo que la plataforma permanece abierta en la computadora de cada colaborador, aunque no haya actividad. Los días con más de 12 horas se marcan para revisión.</p>`;
+    <p class="note">El tiempo en plataforma cuenta el tiempo que la plataforma permanece abierta en cualquier dispositivo, aunque no haya actividad, y se detiene al enviar el reporte de cierre.</p>`;
   const g = x => document.getElementById(x);
   (g('as') || {}).onchange = e => { S.yo = e.target.value; render(); };
   g('ep').onclick = () => { FE.wk--; render(); }; g('en').onclick = () => { FE.wk++; render(); }; g('et').onclick = () => { FE.wk = 0; render(); };
@@ -915,13 +918,18 @@ function renderDash() {
     document.querySelectorAll('#rto .opt').forEach(b => b.onclick = () => b.classList.toggle('on'));
     document.getElementById('rok').onclick = async () => { const ids = [...document.querySelectorAll('#rto .opt.on')].map(b => b.dataset.k); if (!ids.length) { toast('Elige al menos un destinatario.'); return; }
       const bt = document.getElementById('rok'); bt.disabled = true; bt.textContent = 'Enviando…';
-      const kx = (k, det, sin) => ({ v: D[k].v, det, sin });
-      const payload = { destinatarios: ids, mes: mesTxt, corte: actual ? `Corte al ${fs(HOY)}` : 'Cierre de mes', metas: META,
-        k: { k1: kx('k1', `${D.k1.a} de ${D.k1.b} actividades a tiempo`, !D.k1.b), k2: kx('k2', `${D.k2.tiempo} en tiempo y ${D.k2.venc} vencidas`, !D.k2.activos), k3: kx('k3', `${D.k3.a} de ${D.k3.b} proyectos terminados ya en implementación`, !D.k3.b), k4: kx('k4', `${D.k4.a} de ${D.k4.b} proyectos terminados con impacto validado`, !D.k4.b) },
+      const kx = (k, det, sin, a, b) => ({ v: D[k].v, det, sin, a, b });
+      const Y = +D.m0.slice(0, 4), mesIdx = +D.m0.slice(5, 7) - 1, hoyIdx = +HOY.slice(5, 7) - 1, hoyY = +HOY.slice(0, 4), moG = FD.mo;
+      const serie = { meses: Array.from({ length: 12 }, (_, i) => `${Y}-${String(i + 1).padStart(2, '0')}`), k1: [], k2: [], k3: [], k4: [], actualIdx: mesIdx };
+      for (let i = 0; i < 12; i++) { const futuro = Y > hoyY || (Y === hoyY && i > hoyIdx); if (futuro) { ['k1', 'k2', 'k3', 'k4'].forEach(k => serie[k].push(null)); continue; }
+        FD.mo = (Y - hoyY) * 12 + (i - hoyIdx); const X = calcDash();
+        serie.k1.push(X.k1.b ? X.k1.v / 100 : null); serie.k2.push(i === mesIdx && X.k2.activos ? X.k2.v / 100 : null); serie.k3.push(X.k3.b ? X.k3.v / 100 : null); serie.k4.push(X.k4.b ? X.k4.v / 100 : null); }
+      FD.mo = moG;
+      const payload = { destinatarios: ids, mes: mesTxt, actual, anio: Y, corteLargo: `${+HOY.slice(8)} de ${MES[hoyIdx]}`, metas: META, serie,
+        k: { k1: kx('k1', `${D.k1.a} de ${D.k1.b} actividades a tiempo`, !D.k1.b, D.k1.a, D.k1.b), k2: kx('k2', `${D.k2.tiempo} en tiempo · ${D.k2.venc} vencidas`, !D.k2.activos, D.k2.tiempo, D.k2.activos),
+          k3: kx('k3', `${D.k3.a} de ${D.k3.b} proyectos en implementación`, !D.k3.b, D.k3.a, D.k3.b), k4: kx('k4', `${D.k4.a} de ${D.k4.b} proyectos validados`, !D.k4.b, D.k4.a, D.k4.b) },
         fa: fa.map(x => x[1]), fm: fm.map(x => x[1]), fun, dist: dist.map(x => ({ n: x.n, c: x.c, v: x.v })),
-        desg: desg.map(d => ({ n: d.p.n, c: d.p.c, tipo: d.p.tipo, inst: d.p.inst, area: d.p.area, comp: d.p.comp, act: d.n, ter: d.t, av: d.v })),
-        acts: D.acts.filter(a => enMes(a.f, D.m0, D.m1)).map(a => ({ tipo: a.ind ? 'Individual' : 'Proyecto', proyecto: a.ind ? 'Actividad individual' : pj(a.p).n, actividad: a.t, responsable: (PERS[a.r] || {}).n || '', entrega: a.f, estado: a.st, terminada: a.st === 'Terminado' ? (a.fdone || '') : '', aTiempo: a.st === 'Terminado' ? ((a.fdone || a.f) <= a.f ? 'Sí' : 'No') : '' })),
-        term: PROY.filter(p => p.est === 'Terminado' && enMes(p.fter, D.m0, D.m1)).map(p => ({ n: p.n, tipo: p.tipo, area: p.area, fter: p.fter, impl: (p.imp && p.imp.impl) || '', valor: (p.imp && p.imp.valor) || '', validado: p.imp && p.imp.final ? 'Sí' : 'No' })) };
+        desg: desg.map(d => ({ n: d.p.n, c: d.p.c, act: d.n, ter: d.t, av: d.v })) };
       try { await DB.funcion('indicadores', payload); closeSheet(); toast('Reporte de indicadores enviado con el Excel adjunto.'); } catch (e) { bt.disabled = false; bt.textContent = 'Enviar'; toast(e.message); } }; };
   document.querySelectorAll('.dz-tab [data-pj]').forEach(r => r.onclick = () => proyecto(r.dataset.pj));
 }
@@ -1206,7 +1214,7 @@ function renderAjustes() {
       <div class="f"><span>Tipo de usuario</span><div class="ro">${tipoDe(S.yo)}</div></div><div class="f"><span>Correo</span><div class="ro">${esc(yo.email || '')}</div></div>
       ${fotoCampo(S.yo, 'pfoto')}
       <div class="f full"><span>Color</span><div class="sws">${PAL.map(c => `<button type="button" class="sw ${yo.c === c ? 'on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color"></button>`).join('')}</div></div>
-      <div class="f full"><span>Cuenta</span><div style="display:flex;gap:8px;flex-wrap:wrap">${maestra ? '<button type="button" class="btn sm" id="ppw">Cambiar mi contraseña</button>' : ''}<button type="button" class="btn sm" id="ppush">Activar notificaciones en este dispositivo</button><button type="button" class="btn sm" id="plog" style="color:var(--bad)">Cerrar sesión</button></div></div></div></div>
+      <div class="f full"><span>Cuenta y notificaciones</span><small class="sub" id="pstat" style="display:block;margin:0 0 6px">Revisando notificaciones…</small><div style="display:flex;gap:8px;flex-wrap:wrap">${maestra ? '<button type="button" class="btn sm" id="ppw">Cambiar mi contraseña</button>' : ''}<button type="button" class="btn sm" id="ppush">Activar notificaciones en este dispositivo</button><button type="button" class="btn sm" id="ptest">Enviar notificación de prueba</button><button type="button" class="btn sm" id="plog" style="color:var(--bad)">Cerrar sesión</button></div></div></div></div>
       <div class="sh-f"><button class="btn dark" id="psave">Guardar perfil</button></div></section>`;
   if (FA.tab === 'notif') body = `<section class="card"><div class="ch"><h3>Notificaciones del equipo</h3><span class="sub r">Obligatorias para todos; solo la administradora maestra las configura</span></div>
       <table class="ntab"><thead><tr><th>Aviso</th><th>Lo recibe</th><th class="c">Correo</th><th class="c">En la plataforma</th></tr></thead><tbody>${NTIP.map(([k, n, quien]) => `<tr><td>${n}</td><td><span class="ichip" style="--c:${quien === 'Todos' ? '#14394D' : '#8C2341'}">${quien}</span></td>${[0, 1].map(i => `<td class="c"><label class="tg"><input type="checkbox" data-nt="${k}:${i}" ${CFG.notif[k][i] ? 'checked' : ''}><span></span></label></td>`).join('')}</tr>`).join('')}</tbody></table>
@@ -1247,6 +1255,9 @@ function renderAjustes() {
   if (g('psave')) g('psave').onclick = () => { yo.n = g('pn').value.trim() || yo.n; guardar(() => DB.perfilPropio(yo), 'Perfil guardado'); render(); };
   if (g('ppw')) g('ppw').onclick = miClave;
   if (g('plog')) g('plog').onclick = salir;
+  if (g('pstat')) estadoPush().then(t => { if (g('pstat')) g('pstat').textContent = t; });
+  if (g('ptest')) g('ptest').onclick = async () => { const { error } = await SB.rpc('aviso_prueba'); toast(error ? 'No se pudo enviar la prueba: ' + error.message : 'Prueba enviada. Debe llegar a tus dispositivos en menos de un minuto.'); };
+  if (g('ppush')) { const o = g('ppush').onclick; g('ppush').onclick = async () => { await o(); estadoPush().then(t => { if (g('pstat')) g('pstat').textContent = t; }); }; }
   enlazarFoto('pfoto', async blob => { toast('Subiendo foto…'); await guardar(() => subirFoto(S.yo, blob), 'Foto actualizada'); render(); });
   if (g('pfotodel')) g('pfotodel').onclick = async () => { await guardar(() => quitarFoto(S.yo), 'Foto eliminada'); render(); };
   if (g('ppush')) g('ppush').onclick = async () => toast(await activarPush(true) ? 'Notificaciones activadas en este dispositivo.' : 'No se pudieron activar. Revisa los permisos del navegador; en iPhone, primero instala la app en tu pantalla de inicio.');
@@ -1301,7 +1312,7 @@ function renderAcProy() {
   document.getElementById('main').innerHTML = `
     <div class="top"><h1>Mis proyectos</h1><span class="date">Área ${esc(PERS[S.yo].area)}</span><div class="acts">${verComo()}</div></div>
     <div class="tools"><div class="seg" id="actab">${['Activo', 'Terminado'].map(t => `<button data-t="${t}" class="${tab === t ? 'on' : ''}">${t === 'Activo' ? 'Activos' : 'Terminados'} · ${ps.filter(p => p.est === t).length}</button>`).join('')}</div></div>
-    ${list.length ? `<div class="pgal">${list.map(p => { const v = avance(p), en = entregablesDe(p); return `<button class="pcard" data-acp="${p.id}"><div class="pcov" style="--c:${p.c}"><span class="chip">${esc(p.tipo)}</span>${en.some(a => extEst(a) === 'Por validar') ? '<span class="chip warn">Por revisar</span>' : ''}</div>
+    ${list.length ? `<div class="pgal">${list.map(p => { const v = avance(p), en = entregablesDe(p); return `<button class="pcard" data-acp="${p.id}"><div class="pcov" style="--c:${p.c}${fondoFoto(p.foto)}"><span class="chip">${esc(p.tipo)}</span>${en.some(a => extEst(a) === 'Por validar') ? '<span class="chip warn">Por revisar</span>' : ''}</div>
       <div class="pbody"><div class="pt2">${esc(p.n)}</div><div class="pinst">${esc(p.inst)}</div><div class="pgrid"><div><small>Solicitud</small><b>${fs(p.fsol)}</b></div><div><small>Compromiso</small><b>${fs(p.comp)}</b></div><div><small>Entregables</small><b>${en.filter(a => extEst(a) === 'Aprobado').length}/${en.length}</b></div></div>
       <div class="pfoot"><span>Avance</span><b>${v}%</b></div><div class="pbar"><i style="width:${Math.max(v, 2)}%;background:${p.c}"></i></div></div></button>`; }).join('')}</div>` : '<div class="empty">No hay proyectos en esta vista.</div>'}`;
   bindVerComo();
@@ -1325,7 +1336,7 @@ function extBloque(p) {
 function acProyecto(id) {
   const p = PROY.find(x => x.id === id), v = avance(p), en = entregablesDe(p).sort((a, b) => a.f.localeCompare(b.f)), eq = [...new Set(A.filter(a => a.p === p.id).map(a => a.r))];
   openSheet(`<div class="sh-h"><span class="chip dark" style="--c:${p.c}">${esc(p.tipo)}</span><span class="chip">${esc(p.inst)}</span><span class="chip ${p.est === 'Activo' ? 'id' : 'ok'}">${p.est}</span>${X}</div>
-    <div class="ban" style="--c:${p.c}"></div><h2 class="ptitle">${esc(p.n)}</h2>
+    <div class="ban" style="--c:${p.c}${fondoFoto(p.foto, true)}"></div><h2 class="ptitle">${esc(p.n)}</h2>
     <div class="dl"><div><small>Área solicitante</small><b>${esc(p.area)}</b></div><div><small>Fecha de solicitud</small><b>${fs(p.fsol)}</b></div><div><small>Fecha compromiso</small><b>${fs(p.comp)}</b></div>${p.est === 'Terminado' ? `<div><small>Terminado</small><b>${fs(p.fter)}</b></div>` : ''}</div>
     <div class="adv"><b>${v}%</b><div><div class="pbar"><i style="width:${Math.max(v, 2)}%;background:${p.c}"></i></div><small>Avance general del proyecto</small></div></div>
     <h3 class="sh3">Equipo responsable</h3><div class="people">${eq.map(k => `<div class="person">${av(k, 30)}<div><b>${esc(PERS[k].n)}</b><small>${esc(PERS[k].rol)}</small></div></div>`).join('')}</div>
@@ -1484,7 +1495,7 @@ async function cargar() {
   fill(TIPOS, 'tipo_proyecto'); fill(INSTS, 'institucion'); fill(AREAS, 'area'); fill(MEDIOS_E, 'medio_entrega'); fill(MEDIOS, 'medio_retro');
   if (cfg) { Object.assign(META, cfg.metas || {}); CFG.horaRep = cfg.hora_rep || CFG.horaRep; CFG.horaAgenda = cfg.hora_agenda || CFG.horaAgenda; Object.entries(cfg.notif || {}).forEach(([k, v]) => { if (CFG.notif[k]) CFG.notif[k] = v; }); }
   vaciar(PROY);
-  proys.forEach(p => PROY.push({ id: p.id, n: p.nombre, c: p.color || '#8C2341', comp: p.fcomp, fsol: p.fsol, tipo: p.tipo, inst: p.institucion, area: p.area, est: p.estado, fter: p.fter,
+  proys.forEach(p => PROY.push({ id: p.id, n: p.nombre, c: p.color || '#8C2341', comp: p.fcomp, fsol: p.fsol, tipo: p.tipo, inst: p.institucion, area: p.area, est: p.estado, fter: p.fter, foto: p.foto || null,
     eq: peq.filter(x => x.proyecto_id === p.id).map(x => x.perfil_id),
     imp: p.imp_frec || p.imp_final ? { frec: p.imp_frec, medio: p.imp_medio, quien: p.imp_quien || '', com: p.imp_com || '', valor: p.imp_valor || '', impl: p.imp_impl, final: p.imp_final, por: p.imp_por, ffin: p.imp_ffin } : undefined }));
   vaciar(A);
@@ -1505,7 +1516,7 @@ async function cargar() {
   inis.forEach(i => INI.push({ id: i.id, t: i.trimestre, n: i.nombre, obj: i.objetivo || '', kpi: i.kpi || KPIS[0], meta: i.meta || '', c: i.color || '#3C74D6',
     acc: accs.filter(x => x.iniciativa_id === i.id).map(x => ({ id: x.id, a: x.accion, r: x.responsable, lim: x.limite, res: x.resultado || '', fel: x.felab, obt: x.obtenido || '', ok: x.cumplio, w: 0 })) }));
   vaciar(PROGS);
-  progs.forEach(g => PROGS.push({ id: g.id, n: g.nombre, cli: g.cliente || '', inst: g.institucion || '', c: g.color || '#7A4CE0', horas: +g.horas || 0, grupos: g.grupos || 1, porSes: g.por_sesiones, nSes: g.n_sesiones || 0, est: g.estado,
+  progs.forEach(g => PROGS.push({ id: g.id, n: g.nombre, cli: g.cliente || '', inst: g.institucion || '', c: g.color || '#7A4CE0', horas: +g.horas || 0, grupos: g.grupos || 1, porSes: g.por_sesiones, nSes: g.n_sesiones || 0, est: g.estado, foto: g.foto || null,
     mods: (g.modulos || []).map((m, k) => ({ n: m.n, ini: m.ini, fin: m.fin, ses: m.ses || [], profs: m.profs || [], k })) }));
   vaciar(TIEMPO);
   tiempo.forEach(t => { (TIEMPO[t.perfil_id] = TIEMPO[t.perfil_id] || {})[t.fecha] = { s: t.segundos, post: t.segundos_post }; });
@@ -1570,14 +1581,41 @@ const DB = {
 };
 const CAT_TIPO = { 'Tipos de proyecto': 'tipo_proyecto', 'Instituciones': 'institucion', 'Áreas solicitantes': 'area', 'Medios de entrega': 'medio_entrega', 'Medios de retroalimentación': 'medio_retro' };
 
-/* ---------- Tiempo en plataforma: un latido por minuto, una sola pestaña ---------- */
-let latido = null;
+/* ---------- Tiempo en plataforma ----------
+   Cuenta el tiempo real que la plataforma permanece abierta, aunque esté minimizada o en el Dock:
+   en cada latido se envía el tiempo transcurrido desde el anterior (el servidor evita duplicar entre dispositivos). */
+let latido = null, ultimoPulso = Date.now(), enviandoPulso = false;
+function pulsoTiempo() {
+  if (!S.yo || !PERS[S.yo] || PERS[S.yo].ext || enviandoPulso) return;
+  const ahora = Date.now(), seg = Math.round((ahora - ultimoPulso) / 1000);
+  if (seg < 20) return;
+  enviandoPulso = true;
+  SB.rpc('sumar_tiempo', { p_segundos: seg }).then(r => { if (!r || !r.error) ultimoPulso = ahora; }, () => { }).finally(() => { enviandoPulso = false; });
+}
 function iniciarTiempo() {
   if (latido || !PERS[S.yo] || PERS[S.yo].ext) return;
-  const canal = 'BroadcastChannel' in window ? new BroadcastChannel('id-tiempo') : null, yoTab = uid(); let lider = true;
-  if (canal) { canal.onmessage = e => { if (e.data && e.data.tab !== yoTab && e.data.t > Date.now() - 70000) lider = e.data.tab < yoTab; }; }
-  const pulso = () => { if (canal) canal.postMessage({ tab: yoTab, t: Date.now() }); if (lider) SB.rpc('sumar_tiempo').then(() => { }, () => { }); };
-  pulso(); latido = setInterval(pulso, 60000);
+  ultimoPulso = Date.now();
+  latido = setInterval(pulsoTiempo, 60000);
+  ['visibilitychange', 'focus', 'pageshow', 'online'].forEach(ev => window.addEventListener(ev, pulsoTiempo));
+}
+
+/* ---------- Cambios en vivo ---------- */
+const TABLAS_VIVO = ['perfiles', 'config', 'catalogos', 'proyectos', 'proyecto_equipo', 'actividades', 'ajustes', 'ext_revisiones', 'individuales', 'reportes_cierre', 'innovaciones', 'innovacion_comentarios', 'iniciativas', 'ini_acciones', 'programas'];
+let tRecarga = null, recargaPendiente = false;
+const fichaAbierta = () => document.getElementById('sheet').classList.contains('on');
+const escribiendo = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('#main') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
+function programarRecarga() {
+  clearTimeout(tRecarga);
+  tRecarga = setTimeout(() => { if (!S.yo) return; if (fichaAbierta() || escribiendo()) { recargaPendiente = true; return; } recargaPendiente = false; recargar(); }, 600);
+}
+function trasCerrarFicha() { if (recargaPendiente) programarRecarga(); }
+function enVivo() {
+  try {
+    const ch = SB.channel('id-cambios');
+    TABLAS_VIVO.forEach(t => ch.on('postgres_changes', { event: '*', schema: 'public', table: t }, programarRecarga));
+    ch.subscribe();
+  } catch (e) { console.warn('tiempo real', e); }
+  document.addEventListener('focusout', () => { if (recargaPendiente) setTimeout(programarRecarga, 300); });
 }
 
 /* ---------- Notificaciones push: registrar el dispositivo ---------- */
@@ -1594,6 +1632,15 @@ async function activarPush(pedir) {
     await SB.from('push_suscripciones').upsert({ perfil_id: S.yo, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: 'endpoint' });
     return true;
   } catch (e) { console.warn('push', e); return false; }
+}
+
+async function estadoPush() {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'Este navegador no admite notificaciones. En iPhone, abre la plataforma desde el ícono de tu pantalla de inicio.';
+    if (Notification.permission === 'denied') return 'Las notificaciones están bloqueadas para este sitio en el navegador o en el sistema.';
+    const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+    return sub && Notification.permission === 'granted' ? 'Notificaciones activas en este dispositivo.' : 'Este dispositivo todavía no tiene las notificaciones activadas.';
+  } catch (e) { return 'No se pudo revisar el estado de las notificaciones.'; }
 }
 
 /* ---------- Acceso ---------- */
@@ -1629,7 +1676,7 @@ async function entrar() {
   if (!PERS[S.yo]) { await SB.auth.signOut(); return pantallaAcceso('entrar', 'Tu usuario no tiene perfil en la plataforma. Pide a la administradora que te invite.'); }
   if (PERS[S.yo].off) { await SB.auth.signOut(); return pantallaAcceso('entrar', 'Tu usuario está desactivado. Contacta a la administradora.'); }
   document.body.classList.remove('sin-sesion'); authBox.innerHTML = '';
-  render(); iniciarTiempo(); activarPush(false);
+  render(); iniciarTiempo(); enVivo(); activarPush(false);
 }
 async function salir() { await SB.auth.signOut(); location.reload(); }
 async function iniciar() {
@@ -1640,8 +1687,9 @@ async function iniciar() {
   if (session && invita) return pantallaAcceso('crear');
   if (/error_description=/.test(HASH0)) return pantallaAcceso('entrar', 'El enlace ya expiró o no es válido. Pide que te reenvíen el acceso.');
   await entrar();
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.yo && !document.getElementById('sheet').classList.contains('on')) recargar(); });
-  setInterval(() => { if (S.yo && document.visibilityState === 'visible' && !document.getElementById('sheet').classList.contains('on')) recargar(); }, 120000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.yo) programarRecarga(); });
+  window.addEventListener('focus', () => { if (S.yo) programarRecarga(); });
+  setInterval(() => { if (S.yo) programarRecarga(); }, 60000);
 }
 
 /* ---------- Fotos de perfil ---------- */
@@ -1679,6 +1727,48 @@ function enlazarFoto(id, alElegir) {
   document.querySelector(`[data-foto="${id}"]`).onclick = () => inp.click();
   inp.onchange = async () => { const f = inp.files[0]; if (!f) return; try { const blob = await prepararFoto(f); await alElegir(blob, URL.createObjectURL(blob)); } catch (e) { toast(e.message); } inp.value = ''; };
 }
+
+/* ---------- Fotos de portada (proyectos y programas) ---------- */
+function prepararPortada(file) {
+  return new Promise((res, rej) => {
+    if (!file || !/^image\//.test(file.type)) return rej(new Error('Elige una imagen JPG o PNG.'));
+    if (file.size > 15 * 1024 * 1024) return rej(new Error('La imagen es demasiado grande (máximo 15 MB).'));
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const W = 1200, H = 600, r = Math.max(W / img.width, H / img.height), w = W / r, h = H / r, c = document.createElement('canvas'); c.width = W; c.height = H;
+      c.getContext('2d').drawImage(img, (img.width - w) / 2, (img.height - h) / 2, w, h, 0, 0, W, H); URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res(b) : rej(new Error('No se pudo procesar la imagen.')), 'image/jpeg', 0.82); };
+    img.onerror = () => rej(new Error('No se pudo leer la imagen.')); img.src = url;
+  });
+}
+async function subirPortada(tabla, item, blob) {
+  const path = `${tabla}/${item.id}/portada-${Date.now()}.jpg`;
+  const { error } = await SB.storage.from('portadas').upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+  if (error) throw error;
+  const url = SB.storage.from('portadas').getPublicUrl(path).data.publicUrl, previa = item.foto;
+  await q(SB.from(tabla).update({ foto: url }).eq('id', item.id));
+  item.foto = url;
+  if (previa && previa.includes('/portadas/')) SB.storage.from('portadas').remove([previa.split('/portadas/')[1]]).then(() => { }, () => { });
+}
+async function quitarPortada(tabla, item) {
+  const previa = item.foto;
+  await q(SB.from(tabla).update({ foto: null }).eq('id', item.id));
+  item.foto = null;
+  if (previa && previa.includes('/portadas/')) SB.storage.from('portadas').remove([previa.split('/portadas/')[1]]).then(() => { }, () => { });
+}
+const ICO_IMG = '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg>';
+const portadaCampo = (id, titulo, url) => `<div class="f full fotof"><span>${titulo}</span><div class="portup"><div class="portprev" id="${id}prev" style="${url ? `background-image:url('${esc(url)}')` : ''}">${url ? '' : ICO_IMG}</div>
+  <div><input type="file" id="${id}" accept="image/jpeg,image/png,image/webp" hidden><button type="button" class="btn sm" data-foto="${id}">${url ? 'Cambiar foto' : 'Subir foto'}</button>${url ? ` <button type="button" class="btn sm" id="${id}del" style="color:var(--bad)">Quitar</button>` : ''}<small class="sub" style="display:block;margin-top:4px">JPG o PNG. Se recorta en formato horizontal y se guarda al dar clic en Guardar.</small></div></div></div>`;
+function enlazarPortada(id, estado) {
+  const inp = document.getElementById(id); if (!inp) return;
+  const pv = () => document.getElementById(id + 'prev');
+  document.querySelector(`[data-foto="${id}"]`).onclick = () => inp.click();
+  inp.onchange = async () => { const f = inp.files[0]; if (!f) return; try { const b = await prepararPortada(f); estado.blob = b; estado.quitar = false; const u = URL.createObjectURL(b); estado.prev = u; pv().style.backgroundImage = `url('${u}')`; pv().innerHTML = ''; document.querySelector(`[data-foto="${id}"]`).textContent = 'Cambiar foto'; } catch (e) { toast(e.message); } inp.value = ''; };
+  const del = document.getElementById(id + 'del'); if (del) del.onclick = () => { estado.blob = null; estado.quitar = true; estado.prev = null; pv().style.backgroundImage = ''; pv().innerHTML = ICO_IMG; del.remove(); };
+}
+async function guardarPortada(tabla, item, estado) { if (estado.blob) await subirPortada(tabla, item, estado.blob); else if (estado.quitar && item.foto) await quitarPortada(tabla, item); }
+const fondoFoto = (url, fuerte) => url ? `;background:linear-gradient(180deg,rgba(9,22,31,${fuerte ? '.08' : '.05'}),rgba(9,22,31,${fuerte ? '.35' : '.45'})),url('${esc(url)}') center/cover` : '';
+const KPI_K = { 'Cumplimiento en fecha': 'k1', 'Salud del portafolio': 'k2', 'Tasa de implementación': 'k3', 'Impacto validado': 'k4' };
+function kpiActual(nombre) { const k = KPI_K[nombre]; if (!k) return ''; const mo = FD.mo; FD.mo = 0; const D = calcDash(); FD.mo = mo; const x = D[k], sin = k === 'k2' ? !x.activos : !x.b; return sin ? 'sin datos este mes' : `${x.v}% este mes · meta ${META[k]}%`; }
 function elegirDestino() {
   const act = PROY.filter(p => p.est === 'Activo');
   openSheet(`<div class="sh-h"><h2>Nueva actividad</h2>${X}</div><p class="sub">Elige dónde registrarla.</p>
