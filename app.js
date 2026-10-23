@@ -19,7 +19,7 @@ const buildAJ = () => [...A, ...IND.map(a => ({ ...a, p: '__ind' }))].filter(a =
 // Innovación semanal: [responsable, herramienta, tarea que optimiza, ahorro estimado, estatus, subtareas]
 const INN = [];
 const S = { yo: null, wk: 0, view: 'ini' };
-const av = (k, s = 26) => `<span class="av" title="${esc(PERS[k].n)}" style="width:${s}px;height:${s}px;font-size:${s * .38}px;background:${PERS[k].c}">${PERS[k].n.split(' ').map(x => x[0]).slice(0, 2).join('')}</span>`;
+const av = (k, s = 26) => { const P = PERS[k] || { n: '?', c: '#8A9BA6' }; return `<span class="av" title="${esc(P.n)}" style="width:${s}px;height:${s}px;font-size:${s * .38}px;background:${P.c}">${P.foto ? `<img src="${esc(P.foto)}" alt="" loading="lazy">` : esc(P.n.split(' ').map(x => x[0]).slice(0, 2).join(''))}</span>`; };
 const pj = id => PROY.find(p => p.id === id) || { id, n: 'Actividad individual', c: '#C25B76' };
 const ptag = id => `<span class="tag pt" style="--c:${pj(id).c}"><i></i>${esc(pj(id).n)}</span>`;
 const abierta = a => a.st !== 'Terminado';
@@ -779,12 +779,19 @@ function eqForm(k) {
       <label class="f"><span>Tipo de usuario</span><select class="in" id="qt" ${maestra && !(k && P.maestra) ? '' : 'disabled'}>${k && P.maestra ? '<option>Administradora maestra</option>' : tipos.map(([v, l]) => `<option value="${v}" ${P.t === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="f" id="qaw" style="${P.t === 'area' ? '' : 'display:none'}"><span>Área</span><select class="in" id="qa">${AREAS.map(a => `<option ${P.area === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></label>
       ${maestra && !(k && P.maestra) ? `<div class="f full"><span>${k ? 'Nueva contraseña (déjala vacía para no cambiarla)' : 'Contraseña'}</span><div class="pwrow"><input class="in" type="text" id="qp" autocomplete="new-password" placeholder="Mínimo 8 caracteres" value="${k ? '' : genClave()}"><button type="button" class="btn sm" id="qgen">Generar</button><button type="button" class="btn sm" id="qcopy">Copiar</button></div></div>` : ''}
+      ${maestra && !(k && P.maestra) ? fotoCampo(k, 'qfoto', k ? 'Se guarda al elegirla.' : 'Se guarda al crear el usuario.') : ''}
       ${k ? '' : `<div class="f full"><span>Color</span><div class="sws">${PAL.map(c => `<button type="button" class="sw ${P.c === c ? 'on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color"></button>`).join('')}</div></div>`}</div>
     ${maestra ? `<p class="sub">${k ? 'Si cambias la contraseña, compártela tú con la persona; no se le envía correo.' : 'Comparte el correo y la contraseña directamente con la persona; no se le envía correo.'}</p>` : '<p class="sub">Solo la administradora maestra puede crear usuarios, cambiar contraseñas y tipos de usuario.</p>'}
     <div class="sh-f"><button class="btn" data-close>Cancelar</button>${maestra && !(k && P.maestra) ? `<button class="btn dark" id="qok">${k ? 'Guardar' : 'Crear usuario'}</button>` : ''}</div>`);
   const g = x => document.getElementById(x);
   if (g('qt')) g('qt').onchange = () => { g('qaw').style.display = g('qt').value === 'area' ? '' : 'none'; };
   document.querySelectorAll('.sw').forEach(b => b.onclick = () => { P.c = b.dataset.c; document.querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === b)); });
+  let fotoNueva = null;
+  enlazarFoto('qfoto', async (blob, prev) => {
+    if (k) { toast('Subiendo foto…'); await guardar(() => subirFoto(k, blob), 'Foto actualizada'); closeSheet(); render(); eqForm(k); }
+    else { fotoNueva = blob; const pv = g('qfotoprev'); if (pv) pv.innerHTML = `<img src="${prev}" alt="">`; document.querySelector('[data-foto="qfoto"]').textContent = 'Cambiar foto'; }
+  });
+  if (g('qfotodel')) g('qfotodel').onclick = async () => { await guardar(() => quitarFoto(k), 'Foto eliminada'); closeSheet(); render(); eqForm(k); };
   if (g('qgen')) g('qgen').onclick = () => { g('qp').value = genClave(); };
   if (g('qcopy')) g('qcopy').onclick = async () => { const v = g('qp').value; if (!v) return; try { await navigator.clipboard.writeText(v); toast('Contraseña copiada'); } catch (e) { g('qp').select(); toast('Selecciónala y cópiala manualmente'); } };
   if (g('qok')) g('qok').onclick = async () => {
@@ -794,7 +801,9 @@ function eqForm(k) {
     const b = g('qok'); b.disabled = true;
     try {
       if (k) { Object.assign(P, { rol, t, area: t === 'area' ? area : null }); await DB.perfilAdmin(k, P); if (pw) await DB.funcion('invitar', { accion: 'contrasena', id: k, password: pw }); toast(pw ? 'Usuario actualizado y contraseña cambiada' : 'Usuario actualizado'); }
-      else { const email = g('qe').value.trim(); if (!email) { toast('Escribe el correo.'); b.disabled = false; return; } await DB.funcion('invitar', { accion: 'crear', email, password: pw, nombre: n, rol, tipo: t, area, color: P.c }); toast(`Usuario creado. Comparte con ${n} su correo y contraseña.`); }
+      else { const email = g('qe').value.trim(); if (!email) { toast('Escribe el correo.'); b.disabled = false; return; } const r = await DB.funcion('invitar', { accion: 'crear', email, password: pw, nombre: n, rol, tipo: t, area, color: P.c });
+        if (fotoNueva && r && r.id) { PERS[r.id] = PERS[r.id] || { n, c: P.c }; try { await subirFoto(r.id, fotoNueva); } catch (e) { toast('Usuario creado, pero la foto no se pudo subir: ' + e.message); } }
+        toast(`Usuario creado. Comparte con ${n} su correo y contraseña.`); }
       closeSheet(); await recargar();
     } catch (e) { b.disabled = false; toast(e.message); }
   };
@@ -1186,7 +1195,7 @@ function renderAjustes() {
   if (FA.tab === 'perfil') body = `<section class="card"><div class="ch"><h3>Mi perfil</h3></div><div class="aj-prof">${av(S.yo, 72)}<div class="fg" style="flex:1">
       <label class="f"><span>Nombre</span><input class="in" id="pn" value="${esc(yo.n)}"></label><label class="f"><span>Rol</span><input class="in" id="pr" value="${esc(yo.rol)}" ${maestra ? '' : 'disabled'}></label>
       <div class="f"><span>Tipo de usuario</span><div class="ro">${tipoDe(S.yo)}</div></div><div class="f"><span>Correo</span><div class="ro">${esc(yo.email || '')}</div></div>
-      <div class="f full"><span>Foto</span><div class="upl"><button type="button" class="btn">Subir foto</button><span class="sub">JPG o PNG.</span></div></div>
+      ${fotoCampo(S.yo, 'pfoto')}
       <div class="f full"><span>Color</span><div class="sws">${PAL.map(c => `<button type="button" class="sw ${yo.c === c ? 'on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color"></button>`).join('')}</div></div>
       <div class="f full"><span>Cuenta</span><div style="display:flex;gap:8px;flex-wrap:wrap">${maestra ? '<button type="button" class="btn sm" id="ppw">Cambiar mi contraseña</button>' : ''}<button type="button" class="btn sm" id="ppush">Activar notificaciones en este dispositivo</button><button type="button" class="btn sm" id="plog" style="color:var(--bad)">Cerrar sesión</button></div></div></div></div>
       <div class="sh-f"><button class="btn dark" id="psave">Guardar perfil</button></div></section>`;
@@ -1229,6 +1238,8 @@ function renderAjustes() {
   if (g('psave')) g('psave').onclick = () => { yo.n = g('pn').value.trim() || yo.n; guardar(() => DB.perfilPropio(yo), 'Perfil guardado'); render(); };
   if (g('ppw')) g('ppw').onclick = miClave;
   if (g('plog')) g('plog').onclick = salir;
+  enlazarFoto('pfoto', async blob => { toast('Subiendo foto…'); await guardar(() => subirFoto(S.yo, blob), 'Foto actualizada'); render(); });
+  if (g('pfotodel')) g('pfotodel').onclick = async () => { await guardar(() => quitarFoto(S.yo), 'Foto eliminada'); render(); };
   if (g('ppush')) g('ppush').onclick = async () => toast(await activarPush(true) ? 'Notificaciones activadas en este dispositivo.' : 'No se pudieron activar. Revisa los permisos del navegador; en iPhone, primero instala la app en tu pantalla de inicio.');
   document.querySelectorAll('[data-nt]').forEach(c => c.onchange = () => { const [k, i] = c.dataset.nt.split(':'); CFG.notif[k][+i] = c.checked; guardar(() => DB.config(), 'Configuración aplicada a todo el equipo'); });
   if (g('uinv')) g('uinv').onclick = () => eqForm();
@@ -1458,7 +1469,7 @@ async function cargar() {
     tabla('actividades'), tabla('ajustes', x => x.order('created_at')), tabla('ext_revisiones', x => x.order('created_at')), tabla('individuales'), tabla('reportes_cierre'),
     tabla('innovaciones'), tabla('innovacion_comentarios', x => x.order('created_at')), tabla('iniciativas'), tabla('ini_acciones', x => x.order('orden')), tabla('programas'), tabla('tiempo_plataforma')]);
   vaciar(PERS);
-  perf.forEach(p => PERS[p.id] = { n: p.nombre || p.email, rol: p.rol || '', tipo: TIPO_LABEL[p.tipo], t: p.tipo, admin: ['maestra', 'admin'].includes(p.tipo), maestra: p.tipo === 'maestra', ext: p.tipo === 'area', area: p.area, c: p.color || '#14394D', off: !p.activo, email: p.email, desde: p.created_at ? iso(new Date(p.created_at)) : null });
+  perf.forEach(p => PERS[p.id] = { n: p.nombre || p.email, rol: p.rol || '', tipo: TIPO_LABEL[p.tipo], t: p.tipo, admin: ['maestra', 'admin'].includes(p.tipo), maestra: p.tipo === 'maestra', ext: p.tipo === 'area', area: p.area, c: p.color || '#14394D', off: !p.activo, email: p.email, foto: p.foto || null, desde: p.created_at ? iso(new Date(p.created_at)) : null });
   CATS = cats;
   const fill = (arr, t) => { const v = cats.filter(c => c.tipo === t).map(c => c.valor); arr.length = 0; arr.push(...v); };
   fill(TIPOS, 'tipo_proyecto'); fill(INSTS, 'institucion'); fill(AREAS, 'area'); fill(MEDIOS_E, 'medio_entrega'); fill(MEDIOS, 'medio_retro');
@@ -1618,6 +1629,42 @@ async function iniciar() {
   await entrar();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.yo && !document.getElementById('sheet').classList.contains('on')) recargar(); });
   setInterval(() => { if (S.yo && document.visibilityState === 'visible' && !document.getElementById('sheet').classList.contains('on')) recargar(); }, 120000);
+}
+
+/* ---------- Fotos de perfil ---------- */
+function prepararFoto(file) {
+  return new Promise((res, rej) => {
+    if (!file || !/^image\//.test(file.type)) return rej(new Error('Elige una imagen JPG o PNG.'));
+    if (file.size > 12 * 1024 * 1024) return rej(new Error('La imagen es demasiado grande (máximo 12 MB).'));
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const s = Math.min(img.width, img.height), c = document.createElement('canvas'); c.width = c.height = 400;
+      c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 400, 400); URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res(b) : rej(new Error('No se pudo procesar la imagen.')), 'image/jpeg', 0.85); };
+    img.onerror = () => rej(new Error('No se pudo leer la imagen.')); img.src = url;
+  });
+}
+async function subirFoto(k, blob) {
+  const path = `${k}/foto-${Date.now()}.jpg`;
+  const { error } = await SB.storage.from('avatares').upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+  if (error) throw error;
+  const urlNueva = SB.storage.from('avatares').getPublicUrl(path).data.publicUrl;
+  const previa = PERS[k] && PERS[k].foto;
+  await q(SB.rpc('poner_foto', { p: k, p_url: urlNueva }));
+  if (PERS[k]) PERS[k].foto = urlNueva;
+  if (previa && previa.includes('/avatares/')) SB.storage.from('avatares').remove([previa.split('/avatares/')[1]]).then(() => { }, () => { });
+}
+async function quitarFoto(k) {
+  const previa = PERS[k] && PERS[k].foto;
+  await q(SB.rpc('poner_foto', { p: k, p_url: null }));
+  if (PERS[k]) PERS[k].foto = null;
+  if (previa && previa.includes('/avatares/')) SB.storage.from('avatares').remove([previa.split('/avatares/')[1]]).then(() => { }, () => { });
+}
+const fotoCampo = (k, id, nota) => `<div class="f full fotof"><span>Foto de perfil</span><div class="fotoup">${k && PERS[k] ? av(k, 64) : `<span class="av fotoprev" id="${id}prev" style="width:64px;height:64px;background:#C9D3DA"></span>`}
+  <div><input type="file" id="${id}" accept="image/jpeg,image/png,image/webp" hidden><button type="button" class="btn sm" data-foto="${id}">${k && PERS[k] && PERS[k].foto ? 'Cambiar foto' : 'Subir foto'}</button>${k && PERS[k] && PERS[k].foto ? ` <button type="button" class="btn sm" id="${id}del" style="color:var(--bad)">Quitar</button>` : ''}<small class="sub" style="display:block;margin-top:4px">${nota || 'JPG o PNG. Se recorta en cuadrado automáticamente.'}</small></div></div></div>`;
+function enlazarFoto(id, alElegir) {
+  const inp = document.getElementById(id); if (!inp) return;
+  document.querySelector(`[data-foto="${id}"]`).onclick = () => inp.click();
+  inp.onchange = async () => { const f = inp.files[0]; if (!f) return; try { const blob = await prepararFoto(f); await alElegir(blob, URL.createObjectURL(blob)); } catch (e) { toast(e.message); } inp.value = ''; };
 }
 function elegirDestino() {
   const act = PROY.filter(p => p.est === 'Activo');
