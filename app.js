@@ -913,7 +913,16 @@ function renderDash() {
       <div class="f full" style="margin-top:10px"><span style="font-size:12px;font-weight:600;color:var(--ink-2)">Enviar a</span><div class="opts" id="rto" style="margin-top:6px">${Object.entries(EQ()).filter(([, x]) => x.admin).map(([k, x]) => `<button type="button" class="opt on" data-k="${k}">${x.n} · ${x.rol}</button>`).join('')}</div></div>
       <div class="sh-f"><button class="btn" data-close>Cancelar</button><button class="btn dark" id="rok">Enviar</button></div>`);
     document.querySelectorAll('#rto .opt').forEach(b => b.onclick = () => b.classList.toggle('on'));
-    document.getElementById('rok').onclick = () => { const to = [...document.querySelectorAll('#rto .opt.on')].map(b => PERS[b.dataset.k].n); if (!to.length) { toast('Elige al menos un destinatario.'); return; } closeSheet(); toast(`Reporte enviado a ${to.join(' y ')} con el Excel adjunto.`); }; };
+    document.getElementById('rok').onclick = async () => { const ids = [...document.querySelectorAll('#rto .opt.on')].map(b => b.dataset.k); if (!ids.length) { toast('Elige al menos un destinatario.'); return; }
+      const bt = document.getElementById('rok'); bt.disabled = true; bt.textContent = 'Enviando…';
+      const kx = (k, det, sin) => ({ v: D[k].v, det, sin });
+      const payload = { destinatarios: ids, mes: mesTxt, corte: actual ? `Corte al ${fs(HOY)}` : 'Cierre de mes', metas: META,
+        k: { k1: kx('k1', `${D.k1.a} de ${D.k1.b} actividades a tiempo`, !D.k1.b), k2: kx('k2', `${D.k2.tiempo} en tiempo y ${D.k2.venc} vencidas`, !D.k2.activos), k3: kx('k3', `${D.k3.a} de ${D.k3.b} proyectos terminados ya en implementación`, !D.k3.b), k4: kx('k4', `${D.k4.a} de ${D.k4.b} proyectos terminados con impacto validado`, !D.k4.b) },
+        fa: fa.map(x => x[1]), fm: fm.map(x => x[1]), fun, dist: dist.map(x => ({ n: x.n, c: x.c, v: x.v })),
+        desg: desg.map(d => ({ n: d.p.n, c: d.p.c, tipo: d.p.tipo, inst: d.p.inst, area: d.p.area, comp: d.p.comp, act: d.n, ter: d.t, av: d.v })),
+        acts: D.acts.filter(a => enMes(a.f, D.m0, D.m1)).map(a => ({ tipo: a.ind ? 'Individual' : 'Proyecto', proyecto: a.ind ? 'Actividad individual' : pj(a.p).n, actividad: a.t, responsable: (PERS[a.r] || {}).n || '', entrega: a.f, estado: a.st, terminada: a.st === 'Terminado' ? (a.fdone || '') : '', aTiempo: a.st === 'Terminado' ? ((a.fdone || a.f) <= a.f ? 'Sí' : 'No') : '' })),
+        term: PROY.filter(p => p.est === 'Terminado' && enMes(p.fter, D.m0, D.m1)).map(p => ({ n: p.n, tipo: p.tipo, area: p.area, fter: p.fter, impl: (p.imp && p.imp.impl) || '', valor: (p.imp && p.imp.valor) || '', validado: p.imp && p.imp.final ? 'Sí' : 'No' })) };
+      try { await DB.funcion('indicadores', payload); closeSheet(); toast('Reporte de indicadores enviado con el Excel adjunto.'); } catch (e) { bt.disabled = false; bt.textContent = 'Enviar'; toast(e.message); } }; };
   document.querySelectorAll('.dz-tab [data-pj]').forEach(r => r.onclick = () => proyecto(r.dataset.pj));
 }
 function junta(D) {
@@ -1553,7 +1562,11 @@ const DB = {
   config: () => q(SB.from('config').update({ metas: META, hora_agenda: CFG.horaAgenda, hora_rep: CFG.horaRep, notif: CFG.notif, updated_at: new Date().toISOString() }).eq('id', 1)),
   catalogoAgregar: (tipo, valor, orden) => q(SB.from('catalogos').insert({ tipo, valor, orden })),
   catalogoQuitar: (tipo, valor) => q(SB.from('catalogos').delete().eq('tipo', tipo).eq('valor', valor)),
-  funcion: async (nombre, body) => { const { data, error } = await SB.functions.invoke(nombre, { body }); if (error) { let m = error.message; try { const j = await error.context.json(); m = j.error || m; } catch (e) { } throw new Error(m); } if (data && data.error) throw new Error(data.error); return data; }
+  funcion: async (nombre, body) => { const { data, error } = await SB.functions.invoke(nombre, { body });
+    if (error) { let m = error.message, st = error.context && error.context.status; try { const j = await error.context.clone().json(); m = j.error || j.message || j.msg || m; } catch (e) { try { m = (await error.context.text()) || m; } catch (x) { } }
+      const pista = st === 401 ? ' Revisa que la función tenga desactivado "Verify JWT".' : st === 404 ? ` La función "${nombre}" no está publicada con ese nombre.` : '';
+      throw new Error(`${m}${st ? ` (código ${st})` : ''}.${pista}`); }
+    if (data && data.error) throw new Error(data.error); return data; }
 };
 const CAT_TIPO = { 'Tipos de proyecto': 'tipo_proyecto', 'Instituciones': 'institucion', 'Áreas solicitantes': 'area', 'Medios de entrega': 'medio_entrega', 'Medios de retroalimentación': 'medio_retro' };
 
