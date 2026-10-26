@@ -4,5 +4,5 @@ window.ID_CONFIG = {
   supabaseKey: 'sb_publishable_ch2rMjTcU3V-aixiELttVA_QGDyfDlo',
   siteUrl: 'https://grupoexponencial2.github.io/innovacion-disrupcion/',
   vapidPublicKey: 'BEygvOzdLuKUdb_KAzvkT2OtFQ1rsdw6FP6g8Ml85szk9vbLuHs-jjy8JoemqYpzFfyc1OjyCzBDLR1M7UEt9N4',
-  version: '1.0.0'
+  version: '1.2.0'
 };

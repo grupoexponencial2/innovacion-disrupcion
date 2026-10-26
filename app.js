@@ -51,7 +51,7 @@ function renderInicio() {
   document.getElementById('main').innerHTML = `
     <div class="top"><h1>Inicio</h1><span class="date">${DIA[d.getDay()].replace(/^./, c => c.toUpperCase())} ${d.getDate()} de ${MES[d.getMonth()]}, ${d.getFullYear()}</span>
       <div class="acts">
-        ${yo.admin ? '<button class="btn" id="inact">Nueva actividad</button><button class="btn dark" id="inpro"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo proyecto</button>' : ''}</div></div>
+        ${puedeCrearP() ? '<button class="btn" id="inact">Nueva actividad</button><button class="btn dark" id="inpro"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo proyecto</button>' : ''}</div></div>
     <section class="band"><div><small>Innovación &amp; Disrupción · ${esc(yo.rol)}</small><h2>${sal}, ${esc(yo.n.split(' ')[0])}. Esto es lo que tienes en marcha.</h2></div>
       <div class="kp"><div class="kpi"><div class="l"><span>${IC.b}</span>Proyectos activos</div><b>${proys.length}</b><em>donde participas</em></div>
         <div class="kpi"><div class="l"><span>${IC.c}</span>Actividades abiertas</div><b>${mias.filter(abierta).length}</b><em>${venc.length} vencida(s)</em></div>
@@ -74,6 +74,17 @@ function renderInicio() {
           ${yo.admin ? '' : j.st === 'Pendiente' ? `<button class="btn2" data-ajv="${j.id}">${j.ini ? 'Registrar entrega del ajuste' : 'Registrar inicio del ajuste'}</button>` : '<span class="btn2 ok">Enviado a revisión</span>'}</div></div>`).join('') + (ajs.length > 3 ? `<a class="more">Ver los ${ajs.length} ajustes</a>` : '') : '<div class="empty">Sin ajustes pendientes.</div>'}</section>
 
     </div>
+${(() => {
+      const porRev = [...A.filter(a => a.sup === S.yo && a.r !== S.yo && a.st === 'Necesita revisión').map(a => ({ id: a.id, ind: false, t: a.t, d: `${pj(a.p).n} · ${PERS[a.r] ? PERS[a.r].n : ''}`, f: a.f })),
+        ...IND.filter(a => a.aut === S.yo && a.sup && a.r !== S.yo && a.st === 'Necesita revisión').map(a => ({ id: a.id, ind: true, t: a.t, d: `Actividad individual · ${PERS[a.r] ? PERS[a.r].n : ''}`, f: a.doneH ? a.doneH.slice(0, 10) : a.f }))];
+      const enviadas = [...A.filter(a => a.r === S.yo && a.st === 'Necesita revisión').map(a => ({ id: a.id, ind: false, t: a.t, d: `${pj(a.p).n} · revisa ${PERS[a.sup] ? PERS[a.sup].n : ''}` })),
+        ...IND.filter(a => a.r === S.yo && a.st === 'Necesita revisión').map(a => ({ id: a.id, ind: true, t: a.t, d: `Actividad individual · autoriza ${PERS[a.aut] ? PERS[a.aut].n : ''}` }))];
+      const fila = (x, btn) => `<div class="rw"><span class="okc" style="background:#3C74D6;color:#fff">${btn ? '!' : '…'}</span><div style="min-width:0"><div class="t">${esc(x.t)}</div><div class="m">${esc(x.d)}</div></div>${btn ? `<button class="btn dark sm" data-revv="${x.id}">Revisar</button>` : `<button class="btn sm" data-revv="${x.id}">Ver</button>`}</div>`;
+      return `<section class="card nrev"><div class="ch"><h3>Necesita revisión</h3><span class="badge r" style="background:#E8EFFB;color:#3C74D6">${porRev.length} por revisar</span></div>
+        <span class="hint" style="text-align:left">Actividades que el equipo terminó y esperan tu revisión o autorización.</span>
+        ${porRev.length ? `<div class="rows">${porRev.map(x => fila(x, true)).join('')}</div>` : '<div class="empty">No tienes actividades por revisar.</div>'}
+        ${enviadas.length ? `<div class="nrev-sub"><b>Enviaste a revisión</b><div class="rows">${enviadas.map(x => fila(x, false)).join('')}</div></div>` : ''}</section>`;
+    })()}
 <section class="card inn-card"><div class="ch"><h3><span class="star"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z"/></svg></span>Innovación</h3><span class="est r">Semana del ${fs(lunes(HOY))}</span></div>
         <span class="hint" style="text-align:left">Cada lunes propones una herramienta o idea para optimizar tus tareas. <a class="golink" id="goinn">Ir a Innovación</a></span>
         <div class="innlist">${inns.map(n => { const hechos = n.sub.filter(x => x.d).length, pct = Math.round(hechos / n.sub.length * 100); return `<div class="inn"><div style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1;min-width:0"><div class="t">${esc(n.n)}</div><div class="m">${yo.admin && n.r !== S.yo ? esc(PERS[n.r].n) + ' · ' : ''}Optimiza: ${esc(n.tarea)} · Ahorro estimado: ${n.ahorroE} h por semana</div></div><span class="est">${esc(n.est)}</span></div>
@@ -84,6 +95,7 @@ function renderInicio() {
         return `<div class="day ${f === HOY ? 'hoy' : ''}"><div class="dh"><span>${DIA[dd.getDay()].slice(0, 3)}</span><b>${dd.getDate()}</b>${f === HOY ? '<em>HOY</em>' : ''}</div>${xs.slice(0, 3).map(a => `<div class="ev ${a.st === 'Terminado' ? 'done' : ''} ${vencida(a) ? 'lt' : ''}" style="--c:${vencida(a) ? 'var(--bad)' : pj(a.p).c}"><b>${esc(a.t)}</b><small>${a.h}${a.ent ? ' · ' + esc(a.ent) : ''}</small></div>`).join('') || '<div class="dempty">Sin actividades</div>'}${xs.length > 3 ? `<small class="sub" style="text-align:center">+${xs.length - 3} más</small>` : ''}</div>`; }).join('')}</div></section>
     `;
   document.querySelectorAll('[data-ajv]').forEach(b => b.onclick = () => IND.some(x => x.id === b.dataset.ajv) ? indDetalle(b.dataset.ajv) : actividad(b.dataset.ajv));
+  document.querySelectorAll('[data-revv]').forEach(b => b.onclick = () => IND.some(x => x.id === b.dataset.revv) ? indDetalle(b.dataset.revv) : actividad(b.dataset.revv));
   document.querySelectorAll('.feat .pl').forEach(b => b.onclick = () => { S.view = 'proy'; render(); });
   if (document.getElementById('goinn')) document.getElementById('goinn').onclick = () => { S.view = 'inn'; render(); };
   document.querySelectorAll('[data-det]').forEach(d => d.ontoggle = () => { S.open = S.open || {}; S.open[d.dataset.det] = d.open; });
@@ -135,7 +147,7 @@ function renderProy() {
   document.getElementById('main').innerHTML = `
     <div class="top"><h1>${yo.ext ? 'Mis proyectos' : 'Proyectos'}</h1><span class="date">${base.length} proyecto(s)${yo.admin ? '' : yo.ext ? ` del área ${esc(yo.area)}` : ' en los que participas'}</span>
       <div class="acts">
-        ${yo.admin ? '<button class="btn dark" id="pnew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo proyecto</button>' : ''}</div></div>
+        ${puedeCrearP() ? '<button class="btn dark" id="pnew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo proyecto</button>' : ''}</div></div>
     <div class="tools"><div class="seg" id="ptab">${['Activo', 'Terminado'].map(t => `<button data-t="${t}" class="${FP.tab === t ? 'on' : ''}">${t === 'Activo' ? 'Activos' : 'Terminados'} · ${base.filter(p => p.est === t).length}</button>`).join('')}</div>
       ${sel('ftipo', 'Tipo', FP.tipo, TIPOS.map(x => [x, x]))}${sel('finst', 'Institución', FP.inst, INSTS.map(x => [x, x]))}${sel('farea', 'Área', FP.area, AREAS.map(x => [x, x]))}${sel('fmes', 'Mes de solicitud', FP.mes, meses.map(m => [m, mesL(m + '-01')]))}</div>
     ${list.length ? `<div class="pgal">${list.map(p => { const v = avance(p), xs = A.filter(a => a.p === p.id), aj = xs.filter(a => a.st === 'Requiere ajustes').length;
@@ -144,7 +156,7 @@ function renderProy() {
           <div class="pgrid"><div><small>Área solicitante</small><b>${esc(p.area)}</b></div><div><small>Solicitud</small><b>${fs(p.fsol)}</b></div><div><small>Compromiso</small><b>${fs(p.comp)}</b></div></div>
           <div class="pfoot"><span>${xs.filter(a => a.st === 'Terminado').length} de ${xs.length} actividades</span><b>${v}%</b></div><div class="pbar"><i style="width:${Math.max(v, 2)}%;background:${p.c}"></i></div></div></button>`; }).join('')}</div>`
       : `<div class="empty">${base.length ? 'No hay proyectos con estos filtros.' : 'Aún no participas en proyectos.'}</div>`}
-    <p class="note">${PERS[S.yo].ext ? `Ves los proyectos donde participa el área ${esc(PERS[S.yo].area)}, con el mismo avance que ve el equipo. La revisión de entregables se hace desde "Por revisar" o desde la ficha del proyecto.` : ''}</p><p class="note" style="${PERS[S.yo].ext ? 'display:none' : ''}">Los usuarios solo ven los proyectos en los que participan; crear, editar y terminar proyectos es exclusivo de administradoras.</p>`;
+    <p class="note">${PERS[S.yo].ext ? `Ves los proyectos donde participa el área ${esc(PERS[S.yo].area)}, con el mismo avance que ve el equipo. La revisión de entregables se hace desde "Por revisar" o desde la ficha del proyecto.` : ''}</p><p class="note" style="${PERS[S.yo].ext ? 'display:none' : ''}">Los usuarios ven los proyectos en los que participan y pueden crear los suyos; cada quien edita y termina los proyectos que creó.</p>`;
   (document.getElementById('as') || {}).onchange = e => { S.yo = e.target.value; render(); };
   document.querySelectorAll('#ptab button').forEach(b => b.onclick = () => { FP.tab = b.dataset.t; render(); });
   [['ftipo', 'tipo'], ['finst', 'inst'], ['farea', 'area'], ['fmes', 'mes']].forEach(([id, k]) => document.getElementById(id).onchange = e => { FP[k] = e.target.value; render(); });
@@ -172,7 +184,7 @@ function proyectoForm(p) {
     const n = document.getElementById('fn').value.trim(); if (!n) { toast('Escribe el nombre del proyecto.'); return; }
     const eq = [...document.querySelectorAll('#feq .opt.on')].map(b => b.dataset.k); if (!eq.length) { toast('Selecciona al menos a una persona.'); return; }
     const row = { n, tipo: document.getElementById('ft').value, inst: document.getElementById('fi').value, area: document.getElementById('fa').value, fsol: document.getElementById('fs').value, comp: document.getElementById('fc').value, eq, c: e.c };
-    let it = p; if (p) Object.assign(p, row); else { it = { id: uid(), est: 'Activo', ...row }; PROY.push(it); }
+    let it = p; if (p) Object.assign(p, row); else { it = { id: uid(), est: 'Activo', creador: S.yo, ...row }; if (!PERS[S.yo].admin && !it.eq.includes(S.yo)) it.eq.push(S.yo); PROY.push(it); }
     if (fotoP.blob) toast('Guardando proyecto y foto…');
     guardar(async () => { await DB.proyecto(it, !p); await guardarPortada('proyectos', it, fotoP); }, p ? 'Proyecto actualizado' : 'Proyecto creado').then(() => { render(); if (document.getElementById('sheet').classList.contains('on') && fotoP.blob) proyecto(it.id); }); closeSheet(); render(); proyecto(it.id);
   };
@@ -205,19 +217,20 @@ function proyecto(id) {
     <h3 class="sh3">Equipo involucrado</h3><div class="people">${p.eq.map(k => { const ab = xs.filter(a => a.r === k && a.st !== 'Terminado').length, aj = xs.filter(a => a.r === k).reduce((n, a) => n + nAj(a), 0); return `<div class="person">${av(k, 32)}<div><b>${esc(PERS[k].n)}</b><small>${esc(PERS[k].rol)} · ${ab} abierta(s)${aj ? ` · <span class="kn">${aj} ajuste${aj > 1 ? 's' : ''} recibido${aj > 1 ? 's' : ''}</span>` : ''}</small></div></div>`; }).join('')}</div>
     ${esExt(S.yo) ? extBloque(p) : ''}
     <div class="sh3 row"><h3 class="sh3" style="margin:0">Cronograma general</h3><span class="sub">La línea marca hoy; la punteada, el compromiso</span></div>${gantt(p, xs)}
-    <div class="sh3 row"><h3 class="sh3" style="margin:0">Actividades</h3><span class="sub">${esExt(S.yo) ? 'Avance del equipo por actividad. Abre una actividad para ver su detalle.' : 'Abre una actividad para actualizar su estatus, revisarla o registrar ajustes.'}</span>${yo.admin ? '<button class="btn dark sm" id="anew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva actividad</button>' : ''}</div>
+    <div class="sh3 row"><h3 class="sh3" style="margin:0">Actividades</h3><span class="sub">${esExt(S.yo) ? 'Avance del equipo por actividad. Abre una actividad para ver su detalle.' : 'Abre una actividad para actualizar su estatus, revisarla o registrar ajustes.'}</span>${gestiona(p) ? '<button class="btn dark sm" id="anew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva actividad</button>' : ''}</div>
     <div class="board">${COLS.map(([k, c]) => { const ys = xs.filter(a => a.st === k); return `<div class="bc ${k === 'Requiere ajustes' ? 'adjcol' : ''}" style="--c:${c}"><div class="bh"><i></i>${k}<span>${ys.length}</span></div>${ys.map(card).join('') || '<div class="bempty">Sin actividades</div>'}</div>`; }).join('')}</div>
-    ${yo.admin ? `<div class="sh-f"><button class="btn" id="pedit">Editar proyecto</button><button class="btn dark" id="pend">${p.est === 'Activo' ? 'Marcar como terminado' : 'Reactivar proyecto'}</button></div>` : ''}`, true);
+    ${gestiona(p) ? `<div class="sh-f">${PERS[S.yo].maestra ? '<button class="btn" id="pdel" style="margin-right:auto;color:var(--bad)">Eliminar proyecto</button>' : ''}<button class="btn" id="pedit">Editar proyecto</button><button class="btn dark" id="pend">${p.est === 'Activo' ? 'Marcar como terminado' : 'Reactivar proyecto'}</button></div>` : ''}`, true);
   document.getElementById('sheet').querySelectorAll('[data-ver]').forEach(b => b.onclick = () => actividad(b.dataset.ver));
   document.querySelectorAll('#sheet [data-acr]').forEach(b => b.onclick = () => acRevisar(b.dataset.acr));
   document.querySelectorAll('#sheet [data-acf]').forEach(b => b.onclick = () => acRetro(b.dataset.acf));
   if (document.getElementById('pedit')) document.getElementById('pedit').onclick = () => proyectoForm(p);
+  if (document.getElementById('pdel')) document.getElementById('pdel').onclick = () => borrarProyecto(p);
   if (document.getElementById('pend')) document.getElementById('pend').onclick = () => { if (p.est === 'Activo' && !confirm('¿Marcar el proyecto como terminado? Pasará a Impacto validado para registrar la retroalimentación.')) return; p.est = p.est === 'Activo' ? 'Terminado' : 'Activo'; if (p.est === 'Terminado') { p.fter = HOY; } delete p.imp; guardar(() => DB.estadoProyecto(p)); toast(p.est === 'Terminado' ? 'Proyecto terminado. Ya aparece en Impacto validado para registrar la retroalimentación.' : 'Proyecto reactivado'); render(); proyecto(id); };
   if (document.getElementById('anew')) document.getElementById('anew').onclick = () => actividadForm(p);
 }
 
 const campos = (a, editable, p) => `
-  <label class="f"><span>Responsable</span>${editable && PERS[S.yo].admin ? `<select class="in" id="xr">${p.eq.map(k => `<option value="${k}" ${a.r === k ? 'selected' : ''}>${PERS[k].n}</option>`).join('')}</select>` : `<div class="ro">${av(a.r, 22)} ${esc(PERS[a.r].n)}</div>`}</label>
+  <label class="f"><span>Responsable</span>${editable && gestiona(p) ? `<select class="in" id="xr">${p.eq.map(k => `<option value="${k}" ${a.r === k ? 'selected' : ''}>${PERS[k].n}</option>`).join('')}</select>` : `<div class="ro">${av(a.r, 22)} ${esc(PERS[a.r].n)}</div>`}</label>
   <label class="f"><span>Supervisor de la actividad</span><select class="in" id="xs" ${editable ? '' : 'disabled'}>${Object.entries(EQ()).map(([k, x]) => `<option value="${k}" ${a.sup === k ? 'selected' : ''}>${x.n} · ${x.rol}</option>`).join('')}</select></label>
   <label class="f"><span>Inicio</span><input class="in" type="date" id="xi" value="${a.ini}" ${editable ? '' : 'disabled'}></label>
   <label class="f"><span>Fecha de entrega</span><input class="in" type="date" id="xf" value="${a.f}" ${editable ? '' : 'disabled'}></label>
@@ -225,12 +238,12 @@ const campos = (a, editable, p) => `
   <label class="f"><span>Entregable</span><input class="in" id="xe" value="${esc(a.ent || '')}" ${editable ? '' : 'disabled'}></label>
   <label class="f full"><span>¿Dónde está el entregable?</span><input class="in" id="xu" value="${esc(a.ubi || '')}" placeholder="Liga o ruta: Drive, Dropbox, plataforma" ${editable ? '' : 'disabled'}></label>
   <label class="f full"><span>Notas</span><textarea class="in" id="xn" rows="3" ${editable ? '' : 'disabled'}>${esc(a.notas || '')}</textarea></label>
-  <label class="f full chk2"><input type="checkbox" id="xv" ${a.val ? 'checked' : ''} ${editable && PERS[S.yo].admin ? '' : 'disabled'}><span>Requiere validación del área solicitante (${esc(p.area)})${a.ext ? ` · estado: ${EXC[extEst(a)][1].toLowerCase()}` : ''}</span></label>`;
+  <label class="f full chk2"><input type="checkbox" id="xv" ${a.val ? 'checked' : ''} ${editable && gestiona(p) ? '' : 'disabled'}><span>Requiere validación del área solicitante (${esc(p.area)})${a.ext ? ` · estado: ${EXC[extEst(a)][1].toLowerCase()}` : ''}</span></label>`;
 const leer = a => { const g = id => document.getElementById(id); if (g('xr')) a.r = g('xr').value; a.sup = g('xs').value; a.ini = g('xi').value; a.f = g('xf').value; a.h = g('xh').value; a.ent = g('xe').value.trim(); a.ubi = g('xu').value.trim(); a.notas = g('xn').value.trim(); if (g('xv')) a.val = g('xv').checked; };
 
 function actividad(id) {
   const a = A.find(x => x.id === id), p = pj(a.p), yo = PERS[S.yo];
-  const esResp = a.r === S.yo, esSup = a.sup === S.yo, edit = (esResp || yo.admin) && a.st !== 'Terminado' && a.st !== 'Requiere ajustes';
+  const esResp = a.r === S.yo, esSup = a.sup === S.yo, edit = (esResp || yo.admin || gestiona(p)) && a.st !== 'Terminado' && a.st !== 'Requiere ajustes';
   const u = ultimoAj(a);
   let bloque = '';
   if (a.st === 'Necesita revisión' && esSup) bloque = `<section class="revbox"><h3>Revisión</h3><p class="sub">${esc(PERS[a.r].n)} envió esta actividad a revisión${nAj(a) ? ` (vuelta ${nAj(a) + 1})` : ''}. Revisa el entregable y decide.</p>
@@ -243,7 +256,7 @@ function actividad(id) {
   openSheet(`<div class="sh-h"><span class="chip dark" style="--c:${p.c}">${esc(p.n)}</span>${nAj(a) ? `<span class="chip warn">${nAj(a)} ajuste${nAj(a) > 1 ? 's' : ''}</span>` : ''}${X}</div><h2 class="ptitle">${esc(a.t)}</h2>
     ${bloque}
     <div class="fg">
-      <label class="f full"><span>Estatus</span>${edit && esResp || edit && yo.admin ? `<div class="opts" id="xst">${['Pendiente', 'En progreso', 'Necesita revisión'].map(s => `<button type="button" class="opt ${a.st === s ? 'on' : ''}" data-s="${s}">${s}</button>`).join('')}</div>` : `<div class="ro">${a.st}</div>`}</label>
+      <label class="f full"><span>Estatus</span>${edit && esResp || edit && (yo.admin || gestiona(p)) ? `<div class="opts" id="xst">${['Pendiente', 'En progreso', 'Necesita revisión'].map(s => `<button type="button" class="opt ${a.st === s ? 'on' : ''}" data-s="${s}">${s}</button>`).join('')}</div>` : `<div class="ro">${a.st}</div>`}</label>
       ${campos(a, edit, p)}</div>
     <h3 class="sh3">Historial de ajustes · ${nAj(a)}</h3>${nAj(a) ? `<div class="hist">${a.aj.map((j, i) => `<div class="hi"><b>Ajuste ${i + 1}${j.area ? ' del área solicitante' : ''} · ${esc(PERS[j.sol].n)}, ${fs(j.f)}</b><p>${esc(j.com)}</p><small>Inicio ${fdt(j.ini)} · Entrega ${fdt(j.fin)}</small></div>`).join('')}</div>` : '<div class="empty">Esta actividad no ha requerido ajustes.</div>'}
     <div class="sh-f"><button class="btn" id="back">Volver al proyecto</button>${edit ? '<button class="btn dark" id="save">Guardar</button>' : ''}</div>`, true);
@@ -1057,7 +1070,7 @@ function indDetalle(id) {
   const g = x => document.getElementById(x);
   if (g('dstart')) g('dstart').onclick = () => { a.st = 'En progreso'; guardar(() => DB.estado('individuales', a.id, 'En progreso')); toast('Actividad en progreso'); render(); indDetalle(id); };
   if (g('dedit')) g('dedit').onclick = () => indForm(a);
-  if (g('dok')) g('dok').onclick = () => { const ent = g('d1').value.trim(), ubi = g('d3').value.trim(), dH = g('d4').value;
+  if (g('dok')) g('dok').onclick = () => { if (a.sup && a.aut && !confirm(`¿Ya terminaste "${a.t}"? Se enviará a ${PERS[a.aut] ? PERS[a.aut].n : 'quien autoriza'} para su autorización.`)) return; const ent = g('d1').value.trim(), ubi = g('d3').value.trim(), dH = g('d4').value;
     if (!ent || !ubi || !dH) { toast('Indica qué se entregó, dónde está y la fecha y hora en que se terminó.'); return; }
     Object.assign(a, { ent, medio: g('d2').value, ubi, doneH: dH });
     if (a.sup) { a.st = 'Necesita revisión'; toast(`Notificación enviada a ${PERS[a.aut].n}: "${a.t}" está lista para autorizar.`); }
@@ -1202,7 +1215,7 @@ const CFG = { horaRep: '19:00', horaAgenda: '09:00', notif: { agenda: [true, tru
 const NTIP = [['agenda', 'Agenda del día: mis actividades de hoy (9:00 a. m.)', 'Todos'], ['agendaEq', 'Agenda del equipo (9:00 a. m.)', 'Fernanda: todo el equipo · Ximena: colaboradores'], ['aj', 'Me regresan una actividad con ajustes', 'Todos'], ['rev', 'Tengo una actividad por revisar o autorizar', 'Todos'], ['venc', 'Una actividad mía venció', 'Todos'], ['inn', 'Comentarios en mis herramientas de innovación', 'Todos'], ['rep', 'Reporte de cierre de cada integrante', 'Fernanda y Ximena'], ['auto', 'Integrante que no envió su reporte (automático)', 'Fernanda y Ximena']];
 const FA = { tab: 'perfil' };
 const PERMS_EXT = 1;
-const PERMS = [['Ver Inicio, Proyectos, Innovación, Iniciativas y Actividades individuales', 1, 1, 1], ['Ver Dashboard, Programas en curso, Impacto validado y Equipo', 1, 1, 0], ['Crear y editar proyectos, iniciativas y programas', 1, 1, 0], ['Revisar, aprobar y pedir ajustes', 1, 1, 'Si es supervisor asignado'], ['Enviar reporte de cierre del día', 1, 1, 1], ['Crear usuarios, asignar contraseñas y tipo de usuario', 1, 0, 0], ['Editar metas, catálogos, notificaciones y reportes automáticos', 1, 0, 0]];
+const PERMS = [['Ver Inicio, Proyectos, Innovación, Iniciativas y Actividades individuales', 1, 1, 1], ['Ver Dashboard, Programas en curso, Impacto validado y Equipo', 1, 1, 0], ['Crear proyectos y sus actividades', 1, 1, 'Sí, y gestiona los que crea'], ['Editar cualquier proyecto, iniciativas y programas', 1, 1, 0], ['Revisar, aprobar y pedir ajustes', 1, 1, 'Si es supervisor asignado'], ['Enviar reporte de cierre del día', 1, 1, 1], ['Crear usuarios, asignar contraseñas y tipo de usuario', 1, 0, 0], ['Editar metas, catálogos, notificaciones y reportes automáticos', 1, 0, 0]];
 const tipoDe = k => PERS[k].tipo;
 function renderAjustes() {
   const yo = PERS[S.yo], maestra = !!PERS[S.yo].maestra;
@@ -1214,7 +1227,7 @@ function renderAjustes() {
       <div class="f"><span>Tipo de usuario</span><div class="ro">${tipoDe(S.yo)}</div></div><div class="f"><span>Correo</span><div class="ro">${esc(yo.email || '')}</div></div>
       ${fotoCampo(S.yo, 'pfoto')}
       <div class="f full"><span>Color</span><div class="sws">${PAL.map(c => `<button type="button" class="sw ${yo.c === c ? 'on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color"></button>`).join('')}</div></div>
-      <div class="f full"><span>Cuenta y notificaciones</span><small class="sub" id="pstat" style="display:block;margin:0 0 6px">Revisando notificaciones…</small><div style="display:flex;gap:8px;flex-wrap:wrap">${maestra ? '<button type="button" class="btn sm" id="ppw">Cambiar mi contraseña</button>' : ''}<button type="button" class="btn sm" id="ppush">Activar notificaciones en este dispositivo</button><button type="button" class="btn sm" id="ptest">Enviar notificación de prueba</button><button type="button" class="btn sm" id="plog" style="color:var(--bad)">Cerrar sesión</button></div></div></div></div>
+      <div class="f full"><span>Cuenta y notificaciones</span><small class="sub" style="display:block;margin:0 0 2px">Versión de la plataforma: ${esc((window.ID_CONFIG || {}).version || '')}</small><small class="sub" id="pstat" style="display:block;margin:0 0 6px">Revisando notificaciones…</small><div style="display:flex;gap:8px;flex-wrap:wrap">${maestra ? '<button type="button" class="btn sm" id="ppw">Cambiar mi contraseña</button>' : ''}<button type="button" class="btn sm" id="ppush">Activar notificaciones en este dispositivo</button><button type="button" class="btn sm" id="ptest">Enviar notificación de prueba</button><button type="button" class="btn sm" id="plog" style="color:var(--bad)">Cerrar sesión</button></div></div></div></div>
       <div class="sh-f"><button class="btn dark" id="psave">Guardar perfil</button></div></section>`;
   if (FA.tab === 'notif') body = `<section class="card"><div class="ch"><h3>Notificaciones del equipo</h3><span class="sub r">Obligatorias para todos; solo la administradora maestra las configura</span></div>
       <table class="ntab"><thead><tr><th>Aviso</th><th>Lo recibe</th><th class="c">Correo</th><th class="c">En la plataforma</th></tr></thead><tbody>${NTIP.map(([k, n, quien]) => `<tr><td>${n}</td><td><span class="ichip" style="--c:${quien === 'Todos' ? '#14394D' : '#8C2341'}">${quien}</span></td>${[0, 1].map(i => `<td class="c"><label class="tg"><input type="checkbox" data-nt="${k}:${i}" ${CFG.notif[k][i] ? 'checked' : ''}><span></span></label></td>`).join('')}</tr>`).join('')}</tbody></table>
@@ -1470,6 +1483,8 @@ document.getElementById('navProg').onclick = () => { S.view = 'prog'; closeSheet
    DATOS: conexión con Supabase, carga y guardado
    ===================================================================== */
 const CONF = window.ID_CONFIG;
+const puedeCrearP = () => !!PERS[S.yo] && (PERS[S.yo].admin || PERS[S.yo].t === 'usuario');
+const gestiona = p => !!p && !!PERS[S.yo] && (PERS[S.yo].admin || (PERS[S.yo].t === 'usuario' && p.creador === S.yo));
 const SB = window.supabase.createClient(CONF.supabaseUrl, CONF.supabaseKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
 const TIPO_LABEL = { maestra: 'Administradora maestra', admin: 'Administradora', usuario: 'Usuario', area: 'Área solicitante' };
@@ -1495,7 +1510,7 @@ async function cargar() {
   fill(TIPOS, 'tipo_proyecto'); fill(INSTS, 'institucion'); fill(AREAS, 'area'); fill(MEDIOS_E, 'medio_entrega'); fill(MEDIOS, 'medio_retro');
   if (cfg) { Object.assign(META, cfg.metas || {}); CFG.horaRep = cfg.hora_rep || CFG.horaRep; CFG.horaAgenda = cfg.hora_agenda || CFG.horaAgenda; Object.entries(cfg.notif || {}).forEach(([k, v]) => { if (CFG.notif[k]) CFG.notif[k] = v; }); }
   vaciar(PROY);
-  proys.forEach(p => PROY.push({ id: p.id, n: p.nombre, c: p.color || '#8C2341', comp: p.fcomp, fsol: p.fsol, tipo: p.tipo, inst: p.institucion, area: p.area, est: p.estado, fter: p.fter, foto: p.foto || null,
+  proys.forEach(p => PROY.push({ id: p.id, n: p.nombre, c: p.color || '#8C2341', comp: p.fcomp, fsol: p.fsol, tipo: p.tipo, inst: p.institucion, area: p.area, est: p.estado, fter: p.fter, foto: p.foto || null, creador: p.created_by,
     eq: peq.filter(x => x.proyecto_id === p.id).map(x => x.perfil_id),
     imp: p.imp_frec || p.imp_final ? { frec: p.imp_frec, medio: p.imp_medio, quien: p.imp_quien || '', com: p.imp_com || '', valor: p.imp_valor || '', impl: p.imp_impl, final: p.imp_final, por: p.imp_por, ffin: p.imp_ffin } : undefined }));
   vaciar(A);
@@ -1531,7 +1546,8 @@ async function recargar() { try { await cargar(); } catch (e) { console.error(e)
 const DB = {
   proyecto: async (p, nuevo) => {
     const row = { nombre: p.n, tipo: p.tipo, institucion: p.inst, area: p.area, fsol: p.fsol || null, fcomp: p.comp || null, color: p.c, estado: p.est || 'Activo', fter: p.fter || null };
-    if (nuevo) await q(SB.from('proyectos').insert({ id: p.id, ...row })); else await q(SB.from('proyectos').update(row).eq('id', p.id));
+    if (!PERS[S.yo].admin && !p.eq.includes(S.yo)) p.eq.push(S.yo);
+    if (nuevo) { await q(SB.from('proyectos').insert({ id: p.id, ...row })); p.creador = S.yo; } else await q(SB.from('proyectos').update(row).eq('id', p.id));
     await q(SB.from('proyecto_equipo').delete().eq('proyecto_id', p.id));
     if (p.eq.length) await q(SB.from('proyecto_equipo').insert(p.eq.map(k => ({ proyecto_id: p.id, perfil_id: k }))));
   },
@@ -1539,7 +1555,8 @@ const DB = {
   impacto: p => q(SB.from('proyectos').update({ imp_frec: p.imp.frec || null, imp_medio: p.imp.medio || null, imp_quien: p.imp.quien || null, imp_com: p.imp.com || null, imp_valor: p.imp.valor || null, imp_impl: p.imp.impl || null, imp_final: !!p.imp.final, imp_por: S.yo, imp_ffin: p.imp.final ? HOY : null }).eq('id', p.id)),
   actividad: (a, nuevo) => {
     const row = { proyecto_id: a.p, titulo: a.t, responsable: a.r, supervisor: a.sup || a.r, inicio: a.ini || a.f, entrega: a.f, hora: a.h || '17:00', entregable: a.ent || null, ubicacion: a.ubi || null, notas: a.notas || null, estado: a.st, requiere_val: !!a.val };
-    if (!PERS[S.yo].admin) { delete row.proyecto_id; delete row.responsable; delete row.requiere_val; }
+    if (!gestiona(pj(a.p))) { delete row.proyecto_id; delete row.responsable; delete row.requiere_val; }
+    else if (!PERS[S.yo].admin) delete row.proyecto_id;
     return nuevo ? q(SB.from('actividades').insert({ id: a.id, ...row })) : q(SB.from('actividades').update(row).eq('id', a.id));
   },
   estado: (tabla, id, estado, extra = {}) => q(SB.from(tabla).update({ estado, ...extra }).eq('id', id)),
@@ -1557,6 +1574,10 @@ const DB = {
   },
   comentarioInn: (n, t) => q(SB.from('innovacion_comentarios').insert({ innovacion_id: n.id, perfil_id: S.yo, texto: t })),
   iniciativa: (i, nuevo) => { const row = { trimestre: i.t, nombre: i.n, objetivo: i.obj, kpi: i.kpi, meta: i.meta, color: i.c }; return nuevo ? q(SB.from('iniciativas').insert({ id: i.id, ...row })) : q(SB.from('iniciativas').update(row).eq('id', i.id)); },
+  borrarProyecto: async p => {
+    await q(SB.from('proyectos').delete().eq('id', p.id));
+    if (p.foto && p.foto.includes('/portadas/')) SB.storage.from('portadas').remove([p.foto.split('/portadas/')[1]]).then(() => { }, () => { });
+  },
   borrarIniciativa: i => q(SB.from('iniciativas').delete().eq('id', i.id)),
   accion: (i, x, nuevo, orden) => {
     if (!PERS[S.yo].admin) return q(SB.from('ini_acciones').update({ felab: x.fel || null, obtenido: x.obt || null }).eq('id', x.id));
@@ -1770,12 +1791,28 @@ const fondoFoto = (url, fuerte) => url ? `;background:linear-gradient(180deg,rgb
 const KPI_K = { 'Cumplimiento en fecha': 'k1', 'Salud del portafolio': 'k2', 'Tasa de implementación': 'k3', 'Impacto validado': 'k4' };
 function kpiActual(nombre) { const k = KPI_K[nombre]; if (!k) return ''; const mo = FD.mo; FD.mo = 0; const D = calcDash(); FD.mo = mo; const x = D[k], sin = k === 'k2' ? !x.activos : !x.b; return sin ? 'sin datos este mes' : `${x.v}% este mes · meta ${META[k]}%`; }
 function elegirDestino() {
-  const act = PROY.filter(p => p.est === 'Activo');
+  const act = PROY.filter(p => p.est === 'Activo' && gestiona(p));
   openSheet(`<div class="sh-h"><h2>Nueva actividad</h2>${X}</div><p class="sub">Elige dónde registrarla.</p>
     <div class="mas-l"><button data-dest="ind"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Actividad individual</span><em>›</em></button>
     ${act.map(p => `<button data-dest="${p.id}"><i style="width:12px;height:12px;border-radius:4px;background:${p.c};display:inline-block"></i><span>${esc(p.n)}</span><em>›</em></button>`).join('')}</div>
     ${act.length ? '' : '<p class="sub" style="margin-top:10px">No hay proyectos activos; puedes registrar una actividad individual o crear un proyecto.</p>'}`);
   document.querySelectorAll('[data-dest]').forEach(b => b.onclick = () => { const d = b.dataset.dest; if (d === 'ind') indForm(); else actividadForm(PROY.find(p => p.id === d)); });
+}
+function borrarProyecto(p) {
+  const acts = A.filter(a => a.p === p.id), nAj = acts.reduce((n, a) => n + (a.aj || []).length, 0);
+  openSheet(`<div class="sh-h"><h2>Eliminar proyecto</h2>${X}</div>
+    <div class="delbox"><b>${esc(p.n)}</b><p>Se eliminará definitivamente el proyecto junto con <b>${acts.length} actividad(es)</b>, <b>${nAj} ajuste(s)</b> registrados, su historial de revisiones y su foto. Esta acción no se puede deshacer.</p></div>
+    <label class="f full"><span>Para confirmar, escribe ELIMINAR</span><input class="in" id="delc" autocomplete="off" placeholder="ELIMINAR"></label>
+    <div class="sh-f"><button class="btn" data-close>Cancelar</button><button class="btn" id="delok" disabled style="background:var(--bad);border-color:var(--bad);color:#fff">Eliminar definitivamente</button></div>`);
+  const c = document.getElementById('delc'), b = document.getElementById('delok');
+  c.oninput = () => { b.disabled = c.value.trim().toUpperCase() !== 'ELIMINAR'; };
+  b.onclick = async () => {
+    b.disabled = true; b.textContent = 'Eliminando…';
+    const ok = await guardar(() => DB.borrarProyecto(p));
+    if (!ok) { closeSheet(); return; }
+    PROY.splice(PROY.indexOf(p), 1); for (let i = A.length - 1; i >= 0; i--) if (A[i].p === p.id) A.splice(i, 1);
+    closeSheet(); render(); toast(`Se eliminó "${p.n}".`);
+  };
 }
 iniciar();
 })();
