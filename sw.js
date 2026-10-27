@@ -1,5 +1,5 @@
 // Innovación & Disrupción · service worker (app instalable y notificaciones)
-const VERSION = 'id-1.2.0';
+const VERSION = 'id-1.3.0';
 const SHELL = ['./', 'index.html', 'app.css', 'app.js', 'config.js', 'manifest.webmanifest', 'icono-192.png', 'icono-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

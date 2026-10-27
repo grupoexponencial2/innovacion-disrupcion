@@ -217,7 +217,7 @@ function proyecto(id) {
     <h3 class="sh3">Equipo involucrado</h3><div class="people">${p.eq.map(k => { const ab = xs.filter(a => a.r === k && a.st !== 'Terminado').length, aj = xs.filter(a => a.r === k).reduce((n, a) => n + nAj(a), 0); return `<div class="person">${av(k, 32)}<div><b>${esc(PERS[k].n)}</b><small>${esc(PERS[k].rol)} · ${ab} abierta(s)${aj ? ` · <span class="kn">${aj} ajuste${aj > 1 ? 's' : ''} recibido${aj > 1 ? 's' : ''}</span>` : ''}</small></div></div>`; }).join('')}</div>
     ${esExt(S.yo) ? extBloque(p) : ''}
     <div class="sh3 row"><h3 class="sh3" style="margin:0">Cronograma general</h3><span class="sub">La línea marca hoy; la punteada, el compromiso</span></div>${gantt(p, xs)}
-    <div class="sh3 row"><h3 class="sh3" style="margin:0">Actividades</h3><span class="sub">${esExt(S.yo) ? 'Avance del equipo por actividad. Abre una actividad para ver su detalle.' : 'Abre una actividad para actualizar su estatus, revisarla o registrar ajustes.'}</span>${gestiona(p) ? '<button class="btn dark sm" id="anew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva actividad</button>' : ''}</div>
+    <div class="sh3 row"><h3 class="sh3" style="margin:0">Actividades</h3><span class="sub">${esExt(S.yo) ? 'Avance del equipo por actividad. Abre una actividad para ver su detalle.' : 'Abre una actividad para actualizar su estatus, revisarla o registrar ajustes.'}</span>${puedeAgregarAct(p) ? '<button class="btn dark sm" id="anew"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva actividad</button>' : ''}</div>
     <div class="board">${COLS.map(([k, c]) => { const ys = xs.filter(a => a.st === k); return `<div class="bc ${k === 'Requiere ajustes' ? 'adjcol' : ''}" style="--c:${c}"><div class="bh"><i></i>${k}<span>${ys.length}</span></div>${ys.map(card).join('') || '<div class="bempty">Sin actividades</div>'}</div>`; }).join('')}</div>
     ${gestiona(p) ? `<div class="sh-f">${PERS[S.yo].maestra ? '<button class="btn" id="pdel" style="margin-right:auto;color:var(--bad)">Eliminar proyecto</button>' : ''}<button class="btn" id="pedit">Editar proyecto</button><button class="btn dark" id="pend">${p.est === 'Activo' ? 'Marcar como terminado' : 'Reactivar proyecto'}</button></div>` : ''}`, true);
   document.getElementById('sheet').querySelectorAll('[data-ver]').forEach(b => b.onclick = () => actividad(b.dataset.ver));
@@ -230,7 +230,7 @@ function proyecto(id) {
 }
 
 const campos = (a, editable, p) => `
-  <label class="f"><span>Responsable</span>${editable && gestiona(p) ? `<select class="in" id="xr">${p.eq.map(k => `<option value="${k}" ${a.r === k ? 'selected' : ''}>${PERS[k].n}</option>`).join('')}</select>` : `<div class="ro">${av(a.r, 22)} ${esc(PERS[a.r].n)}</div>`}</label>
+  <label class="f"><span>Responsable</span>${editable && (gestiona(p) || a.creador === S.yo) ? `<select class="in" id="xr">${p.eq.map(k => `<option value="${k}" ${a.r === k ? 'selected' : ''}>${PERS[k].n}</option>`).join('')}</select>` : `<div class="ro">${av(a.r, 22)} ${esc(PERS[a.r].n)}</div>`}</label>
   <label class="f"><span>Supervisor de la actividad</span><select class="in" id="xs" ${editable ? '' : 'disabled'}>${Object.entries(EQ()).map(([k, x]) => `<option value="${k}" ${a.sup === k ? 'selected' : ''}>${x.n} · ${x.rol}</option>`).join('')}</select></label>
   <label class="f"><span>Inicio</span><input class="in" type="date" id="xi" value="${a.ini}" ${editable ? '' : 'disabled'}></label>
   <label class="f"><span>Fecha de entrega</span><input class="in" type="date" id="xf" value="${a.f}" ${editable ? '' : 'disabled'}></label>
@@ -243,7 +243,7 @@ const leer = a => { const g = id => document.getElementById(id); if (g('xr')) a.
 
 function actividad(id) {
   const a = A.find(x => x.id === id), p = pj(a.p), yo = PERS[S.yo];
-  const esResp = a.r === S.yo, esSup = a.sup === S.yo, edit = (esResp || yo.admin || gestiona(p)) && a.st !== 'Terminado' && a.st !== 'Requiere ajustes';
+  const esResp = a.r === S.yo, esSup = a.sup === S.yo, edit = (esResp || yo.admin || gestionaAct(a)) && a.st !== 'Terminado' && a.st !== 'Requiere ajustes';
   const u = ultimoAj(a);
   let bloque = '';
   if (a.st === 'Necesita revisión' && esSup) bloque = `<section class="revbox"><h3>Revisión</h3><p class="sub">${esc(PERS[a.r].n)} envió esta actividad a revisión${nAj(a) ? ` (vuelta ${nAj(a) + 1})` : ''}. Revisa el entregable y decide.</p>
@@ -256,7 +256,7 @@ function actividad(id) {
   openSheet(`<div class="sh-h"><span class="chip dark" style="--c:${p.c}">${esc(p.n)}</span>${nAj(a) ? `<span class="chip warn">${nAj(a)} ajuste${nAj(a) > 1 ? 's' : ''}</span>` : ''}${X}</div><h2 class="ptitle">${esc(a.t)}</h2>
     ${bloque}
     <div class="fg">
-      <label class="f full"><span>Estatus</span>${edit && esResp || edit && (yo.admin || gestiona(p)) ? `<div class="opts" id="xst">${['Pendiente', 'En progreso', 'Necesita revisión'].map(s => `<button type="button" class="opt ${a.st === s ? 'on' : ''}" data-s="${s}">${s}</button>`).join('')}</div>` : `<div class="ro">${a.st}</div>`}</label>
+      <label class="f full"><span>Estatus</span>${edit && esResp || edit && (yo.admin || gestionaAct(a)) ? `<div class="opts" id="xst">${['Pendiente', 'En progreso', 'Necesita revisión'].map(s => `<button type="button" class="opt ${a.st === s ? 'on' : ''}" data-s="${s}">${s}</button>`).join('')}</div>` : `<div class="ro">${a.st}</div>`}</label>
       ${campos(a, edit, p)}</div>
     <h3 class="sh3">Historial de ajustes · ${nAj(a)}</h3>${nAj(a) ? `<div class="hist">${a.aj.map((j, i) => `<div class="hi"><b>Ajuste ${i + 1}${j.area ? ' del área solicitante' : ''} · ${esc(PERS[j.sol].n)}, ${fs(j.f)}</b><p>${esc(j.com)}</p><small>Inicio ${fdt(j.ini)} · Entrega ${fdt(j.fin)}</small></div>`).join('')}</div>` : '<div class="empty">Esta actividad no ha requerido ajustes.</div>'}
     <div class="sh-f"><button class="btn" id="back">Volver al proyecto</button>${edit ? '<button class="btn dark" id="save">Guardar</button>' : ''}</div>`, true);
@@ -279,7 +279,7 @@ function actividad(id) {
 }
 
 function actividadForm(p) {
-  const a = { r: p.eq.find(k => !PERS[k].admin) || p.eq[0], sup: S.yo, ini: HOY, f: add(HOY, 5), h: '17:00', ent: '', ubi: '', notas: '' };
+  const a = { r: gestiona(p) ? (p.eq.find(k => !PERS[k].admin) || p.eq[0]) : S.yo, sup: gestiona(p) ? S.yo : (p.eq.find(k => PERS[k] && PERS[k].admin && k !== S.yo) || S.yo), ini: HOY, f: add(HOY, 5), h: '17:00', ent: '', ubi: '', notas: '' };
   openSheet(`<div class="sh-h"><h2>Nueva actividad</h2>${X}</div><p class="sub">${esc(p.n)} · inicia como Pendiente.</p>
     <div class="fg"><label class="f full"><span>Actividad</span><input class="in" id="at"></label>
       <label class="f"><span>Responsable</span><select class="in" id="xr">${p.eq.map(k => `<option value="${k}" ${a.r === k ? 'selected' : ''}>${PERS[k].n}</option>`).join('')}</select></label>
@@ -287,7 +287,7 @@ function actividadForm(p) {
     <div class="sh-f"><button class="btn" id="ac">Cancelar</button><button class="btn dark" id="aok">Agregar actividad</button></div>`);
   document.getElementById('ac').onclick = () => proyecto(p.id);
   document.getElementById('aok').onclick = () => { const t = document.getElementById('at').value.trim(); if (!t) { toast('Escribe la actividad.'); return; }
-    const n = { id: uid(), p: p.id, t, st: 'Pendiente', aj: [] }; leer(n); A.push(n); guardar(() => DB.actividad(n, true), 'Actividad agregada como Pendiente'); render(); proyecto(p.id); };
+    const n = { id: uid(), p: p.id, t, st: 'Pendiente', aj: [], creador: S.yo }; leer(n); A.push(n); guardar(() => DB.actividad(n, true), 'Actividad agregada como Pendiente'); render(); proyecto(p.id); };
 }
 
 
@@ -1215,7 +1215,7 @@ const CFG = { horaRep: '19:00', horaAgenda: '09:00', notif: { agenda: [true, tru
 const NTIP = [['agenda', 'Agenda del día: mis actividades de hoy (9:00 a. m.)', 'Todos'], ['agendaEq', 'Agenda del equipo (9:00 a. m.)', 'Fernanda: todo el equipo · Ximena: colaboradores'], ['aj', 'Me regresan una actividad con ajustes', 'Todos'], ['rev', 'Tengo una actividad por revisar o autorizar', 'Todos'], ['venc', 'Una actividad mía venció', 'Todos'], ['inn', 'Comentarios en mis herramientas de innovación', 'Todos'], ['rep', 'Reporte de cierre de cada integrante', 'Fernanda y Ximena'], ['auto', 'Integrante que no envió su reporte (automático)', 'Fernanda y Ximena']];
 const FA = { tab: 'perfil' };
 const PERMS_EXT = 1;
-const PERMS = [['Ver Inicio, Proyectos, Innovación, Iniciativas y Actividades individuales', 1, 1, 1], ['Ver Dashboard, Programas en curso, Impacto validado y Equipo', 1, 1, 0], ['Crear proyectos y sus actividades', 1, 1, 'Sí, y gestiona los que crea'], ['Editar cualquier proyecto, iniciativas y programas', 1, 1, 0], ['Revisar, aprobar y pedir ajustes', 1, 1, 'Si es supervisor asignado'], ['Enviar reporte de cierre del día', 1, 1, 1], ['Crear usuarios, asignar contraseñas y tipo de usuario', 1, 0, 0], ['Editar metas, catálogos, notificaciones y reportes automáticos', 1, 0, 0]];
+const PERMS = [['Ver Inicio, Proyectos, Innovación, Iniciativas y Actividades individuales', 1, 1, 1], ['Ver Dashboard, Programas en curso, Impacto validado y Equipo', 1, 1, 0], ['Crear proyectos y sus actividades', 1, 1, 'Sí, y gestiona los que crea'], ['Agregar actividades en proyectos donde participa', 1, 1, 1], ['Editar cualquier proyecto, iniciativas y programas', 1, 1, 0], ['Revisar, aprobar y pedir ajustes', 1, 1, 'Si es supervisor asignado'], ['Enviar reporte de cierre del día', 1, 1, 1], ['Crear usuarios, asignar contraseñas y tipo de usuario', 1, 0, 0], ['Editar metas, catálogos, notificaciones y reportes automáticos', 1, 0, 0]];
 const tipoDe = k => PERS[k].tipo;
 function renderAjustes() {
   const yo = PERS[S.yo], maestra = !!PERS[S.yo].maestra;
@@ -1484,6 +1484,9 @@ document.getElementById('navProg').onclick = () => { S.view = 'prog'; closeSheet
    ===================================================================== */
 const CONF = window.ID_CONFIG;
 const puedeCrearP = () => !!PERS[S.yo] && (PERS[S.yo].admin || PERS[S.yo].t === 'usuario');
+const participa = p => !!p && !!PERS[S.yo] && PERS[S.yo].t === 'usuario' && (p.eq || []).includes(S.yo);
+const puedeAgregarAct = p => gestiona(p) || participa(p);
+const gestionaAct = a => !!a && (gestiona(pj(a.p)) || (a.creador && a.creador === S.yo));
 const gestiona = p => !!p && !!PERS[S.yo] && (PERS[S.yo].admin || (PERS[S.yo].t === 'usuario' && p.creador === S.yo));
 const SB = window.supabase.createClient(CONF.supabaseUrl, CONF.supabaseKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
@@ -1517,7 +1520,7 @@ async function cargar() {
   acts.forEach(a => A.push({ id: a.id, p: a.proyecto_id, t: a.titulo, r: a.responsable, sup: a.supervisor || a.responsable, ini: a.inicio || a.entrega, f: a.entrega, h: (a.hora || '17:00').slice(0, 5), st: a.estado,
     ent: a.entregable || '', ubi: a.ubicacion || '', notas: a.notas || '', val: a.requiere_val, ext: a.ext_estado ? { st: a.ext_estado === 'Aprobado' ? 'Aprobado' : a.ext_estado, fenv: a.ext_fenv } : null,
     extH: revs.filter(r => r.actividad_id === a.id).map(r => ({ ok: r.aprobado, f: r.fecha, com: r.comentario || '', por: r.por })),
-    fdone: a.fdone ? iso(new Date(a.fdone)) : null, aj: ajs.filter(j => j.actividad_id === a.id).map(mapAj) }));
+    fdone: a.fdone ? iso(new Date(a.fdone)) : null, creador: a.created_by || null, aj: ajs.filter(j => j.actividad_id === a.id).map(mapAj) }));
   vaciar(IND);
   inds.forEach(a => { const fsolH = loc(a.fsol), fH = loc(a.fentrega), doneH = loc(a.fdone);
     IND.push({ id: a.id, t: a.titulo, area: a.area, sol: a.solicitante || '', r: a.responsable, sup: a.requiere_sup, aut: a.autoriza, fsolH, fH, fsol: fsolH.slice(0, 10), f: fH.slice(0, 10), st: a.estado,
@@ -1555,8 +1558,7 @@ const DB = {
   impacto: p => q(SB.from('proyectos').update({ imp_frec: p.imp.frec || null, imp_medio: p.imp.medio || null, imp_quien: p.imp.quien || null, imp_com: p.imp.com || null, imp_valor: p.imp.valor || null, imp_impl: p.imp.impl || null, imp_final: !!p.imp.final, imp_por: S.yo, imp_ffin: p.imp.final ? HOY : null }).eq('id', p.id)),
   actividad: (a, nuevo) => {
     const row = { proyecto_id: a.p, titulo: a.t, responsable: a.r, supervisor: a.sup || a.r, inicio: a.ini || a.f, entrega: a.f, hora: a.h || '17:00', entregable: a.ent || null, ubicacion: a.ubi || null, notas: a.notas || null, estado: a.st, requiere_val: !!a.val };
-    if (!gestiona(pj(a.p))) { delete row.proyecto_id; delete row.responsable; delete row.requiere_val; }
-    else if (!PERS[S.yo].admin) delete row.proyecto_id;
+    if (!nuevo) { if (!gestionaAct(a)) { delete row.proyecto_id; delete row.responsable; delete row.requiere_val; } else if (!PERS[S.yo].admin) delete row.proyecto_id; }
     return nuevo ? q(SB.from('actividades').insert({ id: a.id, ...row })) : q(SB.from('actividades').update(row).eq('id', a.id));
   },
   estado: (tabla, id, estado, extra = {}) => q(SB.from(tabla).update({ estado, ...extra }).eq('id', id)),
@@ -1791,7 +1793,7 @@ const fondoFoto = (url, fuerte) => url ? `;background:linear-gradient(180deg,rgb
 const KPI_K = { 'Cumplimiento en fecha': 'k1', 'Salud del portafolio': 'k2', 'Tasa de implementación': 'k3', 'Impacto validado': 'k4' };
 function kpiActual(nombre) { const k = KPI_K[nombre]; if (!k) return ''; const mo = FD.mo; FD.mo = 0; const D = calcDash(); FD.mo = mo; const x = D[k], sin = k === 'k2' ? !x.activos : !x.b; return sin ? 'sin datos este mes' : `${x.v}% este mes · meta ${META[k]}%`; }
 function elegirDestino() {
-  const act = PROY.filter(p => p.est === 'Activo' && gestiona(p));
+  const act = PROY.filter(p => p.est === 'Activo' && puedeAgregarAct(p));
   openSheet(`<div class="sh-h"><h2>Nueva actividad</h2>${X}</div><p class="sub">Elige dónde registrarla.</p>
     <div class="mas-l"><button data-dest="ind"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Actividad individual</span><em>›</em></button>
     ${act.map(p => `<button data-dest="${p.id}"><i style="width:12px;height:12px;border-radius:4px;background:${p.c};display:inline-block"></i><span>${esc(p.n)}</span><em>›</em></button>`).join('')}</div>
